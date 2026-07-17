@@ -31,7 +31,7 @@ export class CoachingService extends EventEmitter {
   private techMentions: TechMention[] = [];
   private callStartTime = 0;
   private lastSuggestionTime = 0;
-  private minSuggestionInterval = 15000; // 15s between AI calls
+  private minSuggestionInterval = 5000; // 5s between periodic suggestions
   private processingLock = false;
   private lastSegmentTime = 0;
   private silenceTimer: ReturnType<typeof setTimeout> | null = null;
@@ -55,6 +55,9 @@ export class CoachingService extends EventEmitter {
    * Process a new transcript segment — main entry point
    */
   async processSegment(segment: TranscriptSegment): Promise<void> {
+    // Skip partial results for AI processing (only use finals)
+    if (segment.isPartial) return;
+
     this.segments.push(segment);
     this.updateTalkRatio(segment);
     this.resetSilenceTimer();
@@ -64,20 +67,20 @@ export class CoachingService extends EventEmitter {
     for (const mention of techMentions) {
       this.techMentions.push(mention);
       this.emit('tech-mention', mention);
-      this.queueTechLookup(mention);
+      this.queueTechLookup(mention); // fires immediately, no cooldown
     }
 
-    // Detect questions from customer
+    // Detect questions from customer — fires IMMEDIATELY (no cooldown)
     if (this.detector.isQuestion(segment)) {
       this.queueAnswerQuestion(segment.text);
     }
 
     // Auto-detect call type from first few segments
-    if (this.segments.length === 5) {
+    if (this.segments.length === 3) {
       this.autoDetectCallType();
     }
 
-    // Periodic AI triggers (rate-limited)
+    // Periodic AI triggers (rate-limited to avoid spam)
     await this.maybeRunPeriodicChecks(segment);
 
     // Periodic summary
@@ -172,13 +175,13 @@ Respond with JSON:
     this.lastSuggestionTime = now;
 
     try {
-      // Run sentiment analysis every few segments
-      if (this.segments.length % 5 === 0) {
+      // Run sentiment analysis every 3 segments (not 5)
+      if (this.segments.length >= 3 && this.segments.length % 3 === 0) {
         await this.runSentimentAnalysis();
       }
 
-      // Question suggestions every ~30s
-      if (this.segments.length % 8 === 0) {
+      // Question suggestions every 4 segments (not 8)
+      if (this.segments.length >= 3 && this.segments.length % 4 === 0) {
         await this.runQuestionSuggestions();
       }
     } catch (err) {
