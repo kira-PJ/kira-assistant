@@ -44,6 +44,7 @@ export class ConfigStore {
         hotkeyCaptureToggle: 'CommandOrControl+Shift+R',
         hotkeyBookmark: 'CommandOrControl+Shift+B',
         transcriptionMode: 'local',
+        whisperModelPath: 'ggml-tiny.en.bin',
         awsRegion: 'us-east-1',
         bedrockModelId: 'anthropic.claude-3-5-sonnet-20241022-v2:0',
         callType: 'discovery',
@@ -64,7 +65,11 @@ export class ConfigStore {
   }
 
   set(key: string, value: unknown): void {
-    this.store.set(key as keyof GhostConfig, value as never);
+    if (value === undefined) {
+      this.store.delete(key as keyof GhostConfig);
+    } else {
+      this.store.set(key as keyof GhostConfig, value as never);
+    }
   }
 
   getAll(): GhostConfig {
