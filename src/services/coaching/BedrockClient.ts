@@ -33,7 +33,7 @@ export class BedrockClient extends EventEmitter {
 
   constructor(options: BedrockOptions = {}) {
     super();
-    this.modelId = options.modelId ?? 'us.anthropic.claude-sonnet-4-20250514-v1:0';
+    this.modelId = options.modelId ?? 'us.anthropic.claude-haiku-4-5-20251001-v1:0';
     this.maxTokens = options.maxTokens ?? 500;
     this.client = new BedrockRuntimeClient({
       region: options.region ?? process.env.AWS_REGION ?? 'us-east-1',
