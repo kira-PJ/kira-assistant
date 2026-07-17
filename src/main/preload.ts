@@ -9,6 +9,8 @@ contextBridge.exposeInMainWorld('ghostAPI', {
   setOpacity: (opacity: number) => ipcRenderer.invoke('set-opacity', opacity),
   setCollapse: (collapsed: boolean) => ipcRenderer.invoke('set-collapse', collapsed),
   getWindowState: () => ipcRenderer.invoke('get-window-state'),
+  toggleMaximize: () => ipcRenderer.invoke('toggle-maximize'),
+  closeWindow: () => ipcRenderer.invoke('close-window'),
 
   // === Clipboard ===
   copyToClipboard: (text: string) => clipboard.writeText(text),

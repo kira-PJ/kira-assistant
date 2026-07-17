@@ -151,6 +151,22 @@ app.whenReady().then(async () => {
     return null;
   });
 
+  ipcMain.handle('toggle-maximize', () => {
+    if (mainWindow) {
+      if (mainWindow.isMaximized()) {
+        mainWindow.unmaximize();
+      } else {
+        mainWindow.maximize();
+      }
+    }
+  });
+
+  ipcMain.handle('close-window', () => {
+    if (mainWindow) {
+      mainWindow.close();
+    }
+  });
+
   // === Session IPC ===
   ipcMain.handle('start-capture', async () => {
     if (!orchestrator) return { success: false, error: 'Orchestrator not ready' };

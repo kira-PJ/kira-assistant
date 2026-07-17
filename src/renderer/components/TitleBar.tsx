@@ -82,13 +82,27 @@ const TitleBar: React.FC<TitleBarProps> = ({
           title={`Opacity: ${opacity}%`}
         />
 
-        {/* Collapse */}
+        {/* Window controls */}
         <button
           onClick={onCollapse}
           className="text-ghost-text-dim hover:text-ghost-text text-sm px-1"
-          title="Collapse (Ctrl+Shift+M)"
+          title="Minimize (Ctrl+Shift+M)"
         >
           ─
+        </button>
+        <button
+          onClick={() => window.ghostAPI?.toggleMaximize()}
+          className="text-ghost-text-dim hover:text-ghost-text text-sm px-1"
+          title="Maximize / Restore"
+        >
+          □
+        </button>
+        <button
+          onClick={() => window.ghostAPI?.closeWindow()}
+          className="text-ghost-text-dim hover:text-red-400 text-sm px-1"
+          title="Close"
+        >
+          ✕
         </button>
       </div>
     </div>

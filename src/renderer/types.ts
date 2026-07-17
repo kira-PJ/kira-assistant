@@ -7,6 +7,8 @@ export interface GhostAPI {
   setOpacity: (opacity: number) => Promise<void>;
   setCollapse: (collapsed: boolean) => Promise<void>;
   getWindowState: () => Promise<WindowState | null>;
+  toggleMaximize: () => Promise<void>;
+  closeWindow: () => Promise<void>;
 
   // Session
   startCapture: () => Promise<{ success: boolean; error?: string }>;
