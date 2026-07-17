@@ -8,3 +8,5 @@ models/
 *.log
 .DS_Store
 Thumbs.db
+native/audio/build/
+native/audio/node_modules/
