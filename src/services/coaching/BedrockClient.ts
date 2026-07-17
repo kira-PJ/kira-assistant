@@ -71,7 +71,6 @@ export class BedrockClient extends EventEmitter {
       inferenceConfig: {
         maxTokens: this.maxTokens,
         temperature: 0.3,
-        topP: 0.9,
       },
     });
 
