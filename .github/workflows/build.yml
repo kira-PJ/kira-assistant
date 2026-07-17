@@ -9,6 +9,7 @@ on:
 jobs:
   build:
     strategy:
+      fail-fast: false
       matrix:
         include:
           - os: ubuntu-latest
@@ -27,7 +28,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: 'npm'
 
       # Linux dependencies
@@ -41,14 +42,16 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # Build native audio addon
+      # Build native audio addon (skip on macOS/Windows if deps missing — addon is optional)
       - name: Install native addon dependencies
         working-directory: native/audio
         run: npm install
+        continue-on-error: true
 
       - name: Build native addon
         working-directory: native/audio
         run: npm run build
+        continue-on-error: true
 
       # Build the app
       - name: Build app
@@ -70,8 +73,7 @@ jobs:
         run: npm run dist:mac
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          CSC_LINK: ${{ secrets.MAC_CERTIFICATE }}
-          CSC_KEY_PASSWORD: ${{ secrets.MAC_CERTIFICATE_PASSWORD }}
+          CSC_IDENTITY_AUTO_DISCOVERY: false
 
       - name: Package (Windows)
         if: matrix.platform == 'win'

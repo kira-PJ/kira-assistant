@@ -3,7 +3,10 @@
   "version": "0.1.0",
   "description": "K.I.R.A. — Knowledge, Insights & Response Assistant. Invisible AI call companion with real-time transcription and coaching.",
   "main": "dist/main/main/index.js",
-  "author": "Kiira",
+  "author": {
+    "name": "Kiira",
+    "email": "kiira@kira-assistant.dev"
+  },
   "license": "MIT",
   "private": true,
   "scripts": {

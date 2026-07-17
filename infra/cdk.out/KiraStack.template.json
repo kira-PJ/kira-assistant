@@ -1,0 +1,1856 @@
+{
+ "Description": "K.I.R.A. — Knowledge, Insights & Response Assistant cloud infrastructure",
+ "Resources": {
+  "CallsTableD3962D26": {
+   "Type": "AWS::DynamoDB::Table",
+   "Properties": {
+    "AttributeDefinitions": [
+     {
+      "AttributeName": "userId",
+      "AttributeType": "S"
+     },
+     {
+      "AttributeName": "callId",
+      "AttributeType": "S"
+     },
+     {
+      "AttributeName": "callDate",
+      "AttributeType": "S"
+     }
+    ],
+    "BillingMode": "PAY_PER_REQUEST",
+    "GlobalSecondaryIndexes": [
+     {
+      "IndexName": "byDate",
+      "KeySchema": [
+       {
+        "AttributeName": "userId",
+        "KeyType": "HASH"
+       },
+       {
+        "AttributeName": "callDate",
+        "KeyType": "RANGE"
+       }
+      ],
+      "Projection": {
+       "ProjectionType": "ALL"
+      }
+     }
+    ],
+    "KeySchema": [
+     {
+      "AttributeName": "userId",
+      "KeyType": "HASH"
+     },
+     {
+      "AttributeName": "callId",
+      "KeyType": "RANGE"
+     }
+    ],
+    "PointInTimeRecoverySpecification": {
+     "PointInTimeRecoveryEnabled": true
+    },
+    "TableName": "kira-calls"
+   },
+   "UpdateReplacePolicy": "Retain",
+   "DeletionPolicy": "Retain",
+   "Metadata": {
+    "aws:cdk:path": "KiraStack/CallsTable/Resource"
+   }
+  },
+  "UsersTable9725E9C8": {
+   "Type": "AWS::DynamoDB::Table",
+   "Properties": {
+    "AttributeDefinitions": [
+     {
+      "AttributeName": "userId",
+      "AttributeType": "S"
+     }
+    ],
+    "BillingMode": "PAY_PER_REQUEST",
+    "KeySchema": [
+     {
+      "AttributeName": "userId",
+      "KeyType": "HASH"
+     }
+    ],
+    "TableName": "kira-users"
+   },
+   "UpdateReplacePolicy": "Retain",
+   "DeletionPolicy": "Retain",
+   "Metadata": {
+    "aws:cdk:path": "KiraStack/UsersTable/Resource"
+   }
+  },
+  "LearningTableEF207AA9": {
+   "Type": "AWS::DynamoDB::Table",
+   "Properties": {
+    "AttributeDefinitions": [
+     {
+      "AttributeName": "userId",
+      "AttributeType": "S"
+     },
+     {
+      "AttributeName": "entryId",
+      "AttributeType": "S"
+     }
+    ],
+    "BillingMode": "PAY_PER_REQUEST",
+    "KeySchema": [
+     {
+      "AttributeName": "userId",
+      "KeyType": "HASH"
+     },
+     {
+      "AttributeName": "entryId",
+      "KeyType": "RANGE"
+     }
+    ],
+    "TableName": "kira-learning"
+   },
+   "UpdateReplacePolicy": "Retain",
+   "DeletionPolicy": "Retain",
+   "Metadata": {
+    "aws:cdk:path": "KiraStack/LearningTable/Resource"
+   }
+  },
+  "TranscriptsBucketF640F863": {
+   "Type": "AWS::S3::Bucket",
+   "Properties": {
+    "BucketEncryption": {
+     "ServerSideEncryptionConfiguration": [
+      {
+       "ServerSideEncryptionByDefault": {
+        "SSEAlgorithm": "AES256"
+       }
+      }
+     ]
+    },
+    "BucketName": "kira-transcripts-480421269472",
+    "LifecycleConfiguration": {
+     "Rules": [
+      {
+       "Id": "archive-old-transcripts",
+       "Status": "Enabled",
+       "Transitions": [
+        {
+         "StorageClass": "STANDARD_IA",
+         "TransitionInDays": 90
+        },
+        {
+         "StorageClass": "GLACIER",
+         "TransitionInDays": 365
+        }
+       ]
+      }
+     ]
+    },
+    "PublicAccessBlockConfiguration": {
+     "BlockPublicAcls": true,
+     "BlockPublicPolicy": true,
+     "IgnorePublicAcls": true,
+     "RestrictPublicBuckets": true
+    },
+    "VersioningConfiguration": {
+     "Status": "Enabled"
+    }
+   },
+   "UpdateReplacePolicy": "Retain",
+   "DeletionPolicy": "Retain",
+   "Metadata": {
+    "aws:cdk:path": "KiraStack/TranscriptsBucket/Resource"
+   }
+  },
+  "KiraUserPool4AE50047": {
+   "Type": "AWS::Cognito::UserPool",
+   "Properties": {
+    "AccountRecoverySetting": {
+     "RecoveryMechanisms": [
+      {
+       "Name": "verified_email",
+       "Priority": 1
+      }
+     ]
+    },
+    "AdminCreateUserConfig": {
+     "AllowAdminCreateUserOnly": false
+    },
+    "AutoVerifiedAttributes": [
+     "email"
+    ],
+    "EmailVerificationMessage": "The verification code to your new account is {####}",
+    "EmailVerificationSubject": "Verify your new account",
+    "Policies": {
+     "PasswordPolicy": {
+      "MinimumLength": 8,
+      "RequireLowercase": true,
+      "RequireNumbers": true,
+      "RequireSymbols": false,
+      "RequireUppercase": true
+     }
+    },
+    "SmsVerificationMessage": "The verification code to your new account is {####}",
+    "UserPoolName": "kira-users",
+    "UsernameAttributes": [
+     "email"
+    ],
+    "VerificationMessageTemplate": {
+     "DefaultEmailOption": "CONFIRM_WITH_CODE",
+     "EmailMessage": "The verification code to your new account is {####}",
+     "EmailSubject": "Verify your new account",
+     "SmsMessage": "The verification code to your new account is {####}"
+    }
+   },
+   "UpdateReplacePolicy": "Retain",
+   "DeletionPolicy": "Retain",
+   "Metadata": {
+    "aws:cdk:path": "KiraStack/KiraUserPool/Resource"
+   }
+  },
+  "KiraUserPoolKiraDesktopClient45AA0837": {
+   "Type": "AWS::Cognito::UserPoolClient",
+   "Properties": {
+    "AllowedOAuthFlows": [
+     "implicit",
+     "code"
+    ],
+    "AllowedOAuthFlowsUserPoolClient": true,
+    "AllowedOAuthScopes": [
+     "profile",
+     "phone",
+     "email",
+     "openid",
+     "aws.cognito.signin.user.admin"
+    ],
+    "CallbackURLs": [
+     "https://example.com"
+    ],
+    "ExplicitAuthFlows": [
+     "ALLOW_USER_PASSWORD_AUTH",
+     "ALLOW_USER_SRP_AUTH",
+     "ALLOW_REFRESH_TOKEN_AUTH"
+    ],
+    "PreventUserExistenceErrors": "ENABLED",
+    "SupportedIdentityProviders": [
+     "COGNITO"
+    ],
+    "UserPoolId": {
+     "Ref": "KiraUserPool4AE50047"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "KiraStack/KiraUserPool/KiraDesktopClient/Resource"
+   }
+  },
+  "ApiHandlerServiceRole592E70E9": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "lambda.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "ManagedPolicyArns": [
+     {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+       ]
+      ]
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "KiraStack/ApiHandler/ServiceRole/Resource"
+   }
+  },
+  "ApiHandlerServiceRoleDefaultPolicy10321D87": {
+   "Type": "AWS::IAM::Policy",
+   "Properties": {
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": [
+        "dynamodb:BatchGetItem",
+        "dynamodb:Query",
+        "dynamodb:GetItem",
+        "dynamodb:Scan",
+        "dynamodb:ConditionCheckItem",
+        "dynamodb:BatchWriteItem",
+        "dynamodb:PutItem",
+        "dynamodb:UpdateItem",
+        "dynamodb:DeleteItem",
+        "dynamodb:DescribeTable"
+       ],
+       "Effect": "Allow",
+       "Resource": [
+        {
+         "Fn::GetAtt": [
+          "CallsTableD3962D26",
+          "Arn"
+         ]
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::GetAtt": [
+             "CallsTableD3962D26",
+             "Arn"
+            ]
+           },
+           "/index/*"
+          ]
+         ]
+        }
+       ]
+      },
+      {
+       "Action": [
+        "dynamodb:GetRecords",
+        "dynamodb:GetShardIterator"
+       ],
+       "Effect": "Allow",
+       "Resource": [
+        {
+         "Fn::GetAtt": [
+          "CallsTableD3962D26",
+          "Arn"
+         ]
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::GetAtt": [
+             "CallsTableD3962D26",
+             "Arn"
+            ]
+           },
+           "/index/*"
+          ]
+         ]
+        }
+       ]
+      },
+      {
+       "Action": [
+        "dynamodb:BatchGetItem",
+        "dynamodb:Query",
+        "dynamodb:GetItem",
+        "dynamodb:Scan",
+        "dynamodb:ConditionCheckItem",
+        "dynamodb:BatchWriteItem",
+        "dynamodb:PutItem",
+        "dynamodb:UpdateItem",
+        "dynamodb:DeleteItem",
+        "dynamodb:DescribeTable"
+       ],
+       "Effect": "Allow",
+       "Resource": [
+        {
+         "Fn::GetAtt": [
+          "UsersTable9725E9C8",
+          "Arn"
+         ]
+        }
+       ]
+      },
+      {
+       "Action": [
+        "dynamodb:GetRecords",
+        "dynamodb:GetShardIterator"
+       ],
+       "Effect": "Allow",
+       "Resource": [
+        {
+         "Fn::GetAtt": [
+          "UsersTable9725E9C8",
+          "Arn"
+         ]
+        }
+       ]
+      },
+      {
+       "Action": [
+        "dynamodb:BatchGetItem",
+        "dynamodb:Query",
+        "dynamodb:GetItem",
+        "dynamodb:Scan",
+        "dynamodb:ConditionCheckItem",
+        "dynamodb:BatchWriteItem",
+        "dynamodb:PutItem",
+        "dynamodb:UpdateItem",
+        "dynamodb:DeleteItem",
+        "dynamodb:DescribeTable"
+       ],
+       "Effect": "Allow",
+       "Resource": [
+        {
+         "Fn::GetAtt": [
+          "LearningTableEF207AA9",
+          "Arn"
+         ]
+        }
+       ]
+      },
+      {
+       "Action": [
+        "dynamodb:GetRecords",
+        "dynamodb:GetShardIterator"
+       ],
+       "Effect": "Allow",
+       "Resource": [
+        {
+         "Fn::GetAtt": [
+          "LearningTableEF207AA9",
+          "Arn"
+         ]
+        }
+       ]
+      },
+      {
+       "Action": [
+        "s3:GetObject*",
+        "s3:GetBucket*",
+        "s3:List*",
+        "s3:DeleteObject*",
+        "s3:PutObject",
+        "s3:PutObjectLegalHold",
+        "s3:PutObjectRetention",
+        "s3:PutObjectTagging",
+        "s3:PutObjectVersionTagging",
+        "s3:Abort*"
+       ],
+       "Effect": "Allow",
+       "Resource": [
+        {
+         "Fn::GetAtt": [
+          "TranscriptsBucketF640F863",
+          "Arn"
+         ]
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::GetAtt": [
+             "TranscriptsBucketF640F863",
+             "Arn"
+            ]
+           },
+           "/*"
+          ]
+         ]
+        }
+       ]
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "PolicyName": "ApiHandlerServiceRoleDefaultPolicy10321D87",
+    "Roles": [
+     {
+      "Ref": "ApiHandlerServiceRole592E70E9"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "KiraStack/ApiHandler/ServiceRole/DefaultPolicy/Resource"
+   }
+  },
+  "ApiHandler5E7490E8": {
+   "Type": "AWS::Lambda::Function",
+   "Properties": {
+    "Code": {
+     "ZipFile": "\n        exports.handler = async (event) => {\n          const body = JSON.parse(event.body || '{}');\n          return {\n            statusCode: 200,\n            headers: { 'Content-Type': 'application/json' },\n            body: JSON.stringify({ message: 'K.I.R.A. API', timestamp: Date.now() }),\n          };\n        };\n      "
+    },
+    "Environment": {
+     "Variables": {
+      "CALLS_TABLE": {
+       "Ref": "CallsTableD3962D26"
+      },
+      "USERS_TABLE": {
+       "Ref": "UsersTable9725E9C8"
+      },
+      "LEARNING_TABLE": {
+       "Ref": "LearningTableEF207AA9"
+      },
+      "TRANSCRIPTS_BUCKET": {
+       "Ref": "TranscriptsBucketF640F863"
+      }
+     }
+    },
+    "FunctionName": "kira-api",
+    "Handler": "index.handler",
+    "MemorySize": 256,
+    "Role": {
+     "Fn::GetAtt": [
+      "ApiHandlerServiceRole592E70E9",
+      "Arn"
+     ]
+    },
+    "Runtime": "nodejs20.x",
+    "Timeout": 30
+   },
+   "DependsOn": [
+    "ApiHandlerServiceRoleDefaultPolicy10321D87",
+    "ApiHandlerServiceRole592E70E9"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "KiraStack/ApiHandler/Resource"
+   }
+  },
+  "KiraApiDE592999": {
+   "Type": "AWS::ApiGateway::RestApi",
+   "Properties": {
+    "Description": "K.I.R.A. backend API",
+    "Name": "kira-api"
+   },
+   "Metadata": {
+    "aws:cdk:path": "KiraStack/KiraApi/Resource"
+   }
+  },
+  "KiraApiCloudWatchRole9DEC067B": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "apigateway.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "ManagedPolicyArns": [
+     {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
+       ]
+      ]
+     }
+    ]
+   },
+   "UpdateReplacePolicy": "Retain",
+   "DeletionPolicy": "Retain",
+   "Metadata": {
+    "aws:cdk:path": "KiraStack/KiraApi/CloudWatchRole/Resource"
+   }
+  },
+  "KiraApiAccount5E06A8A0": {
+   "Type": "AWS::ApiGateway::Account",
+   "Properties": {
+    "CloudWatchRoleArn": {
+     "Fn::GetAtt": [
+      "KiraApiCloudWatchRole9DEC067B",
+      "Arn"
+     ]
+    }
+   },
+   "DependsOn": [
+    "KiraApiDE592999"
+   ],
+   "UpdateReplacePolicy": "Retain",
+   "DeletionPolicy": "Retain",
+   "Metadata": {
+    "aws:cdk:path": "KiraStack/KiraApi/Account"
+   }
+  },
+  "KiraApiDeploymentBA0FF78A608505b3f104d4845eb1ab00646a6de4": {
+   "Type": "AWS::ApiGateway::Deployment",
+   "Properties": {
+    "Description": "K.I.R.A. backend API",
+    "RestApiId": {
+     "Ref": "KiraApiDE592999"
+    }
+   },
+   "DependsOn": [
+    "KiraApicallscallIdGET32290C80",
+    "KiraApicallscallIdOPTIONSFA891AE0",
+    "KiraApicallscallIdA38629B2",
+    "KiraApicallsGET4A9D7825",
+    "KiraApicallsOPTIONS0DD4FBFE",
+    "KiraApicallsPOST8590D371",
+    "KiraApicalls5966FF2C",
+    "KiraApiOPTIONSE8DA32BF",
+    "KiraApisearchOPTIONSF63FD9B4",
+    "KiraApisearchPOST68D88F3D",
+    "KiraApisearch103CBCAF"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "KiraStack/KiraApi/Deployment/Resource",
+    "aws:cdk:do-not-refactor": true
+   }
+  },
+  "KiraApiDeploymentStageprod19007D51": {
+   "Type": "AWS::ApiGateway::Stage",
+   "Properties": {
+    "DeploymentId": {
+     "Ref": "KiraApiDeploymentBA0FF78A608505b3f104d4845eb1ab00646a6de4"
+    },
+    "RestApiId": {
+     "Ref": "KiraApiDE592999"
+    },
+    "StageName": "prod"
+   },
+   "DependsOn": [
+    "KiraApiAccount5E06A8A0"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "KiraStack/KiraApi/DeploymentStage.prod/Resource"
+   }
+  },
+  "KiraApiOPTIONSE8DA32BF": {
+   "Type": "AWS::ApiGateway::Method",
+   "Properties": {
+    "ApiKeyRequired": false,
+    "AuthorizationType": "NONE",
+    "HttpMethod": "OPTIONS",
+    "Integration": {
+     "IntegrationResponses": [
+      {
+       "ResponseParameters": {
+        "method.response.header.Access-Control-Allow-Headers": "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Amz-User-Agent'",
+        "method.response.header.Access-Control-Allow-Origin": "'*'",
+        "method.response.header.Access-Control-Allow-Methods": "'OPTIONS,GET,PUT,POST,DELETE,PATCH,HEAD'"
+       },
+       "StatusCode": "204"
+      }
+     ],
+     "RequestTemplates": {
+      "application/json": "{ statusCode: 200 }"
+     },
+     "Type": "MOCK"
+    },
+    "MethodResponses": [
+     {
+      "ResponseParameters": {
+       "method.response.header.Access-Control-Allow-Headers": true,
+       "method.response.header.Access-Control-Allow-Origin": true,
+       "method.response.header.Access-Control-Allow-Methods": true
+      },
+      "StatusCode": "204"
+     }
+    ],
+    "ResourceId": {
+     "Fn::GetAtt": [
+      "KiraApiDE592999",
+      "RootResourceId"
+     ]
+    },
+    "RestApiId": {
+     "Ref": "KiraApiDE592999"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "KiraStack/KiraApi/Default/OPTIONS/Resource"
+   }
+  },
+  "KiraApicalls5966FF2C": {
+   "Type": "AWS::ApiGateway::Resource",
+   "Properties": {
+    "ParentId": {
+     "Fn::GetAtt": [
+      "KiraApiDE592999",
+      "RootResourceId"
+     ]
+    },
+    "PathPart": "calls",
+    "RestApiId": {
+     "Ref": "KiraApiDE592999"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "KiraStack/KiraApi/Default/calls/Resource"
+   }
+  },
+  "KiraApicallsOPTIONS0DD4FBFE": {
+   "Type": "AWS::ApiGateway::Method",
+   "Properties": {
+    "ApiKeyRequired": false,
+    "AuthorizationType": "NONE",
+    "HttpMethod": "OPTIONS",
+    "Integration": {
+     "IntegrationResponses": [
+      {
+       "ResponseParameters": {
+        "method.response.header.Access-Control-Allow-Headers": "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Amz-User-Agent'",
+        "method.response.header.Access-Control-Allow-Origin": "'*'",
+        "method.response.header.Access-Control-Allow-Methods": "'OPTIONS,GET,PUT,POST,DELETE,PATCH,HEAD'"
+       },
+       "StatusCode": "204"
+      }
+     ],
+     "RequestTemplates": {
+      "application/json": "{ statusCode: 200 }"
+     },
+     "Type": "MOCK"
+    },
+    "MethodResponses": [
+     {
+      "ResponseParameters": {
+       "method.response.header.Access-Control-Allow-Headers": true,
+       "method.response.header.Access-Control-Allow-Origin": true,
+       "method.response.header.Access-Control-Allow-Methods": true
+      },
+      "StatusCode": "204"
+     }
+    ],
+    "ResourceId": {
+     "Ref": "KiraApicalls5966FF2C"
+    },
+    "RestApiId": {
+     "Ref": "KiraApiDE592999"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "KiraStack/KiraApi/Default/calls/OPTIONS/Resource"
+   }
+  },
+  "KiraApicallsGETApiPermissionKiraStackKiraApi54A8B8B3GETcalls6DE579CB": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "ApiHandler5E7490E8",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":execute-api:us-east-1:480421269472:",
+       {
+        "Ref": "KiraApiDE592999"
+       },
+       "/",
+       {
+        "Ref": "KiraApiDeploymentStageprod19007D51"
+       },
+       "/GET/calls"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "KiraStack/KiraApi/Default/calls/GET/ApiPermission.KiraStackKiraApi54A8B8B3.GET..calls"
+   }
+  },
+  "KiraApicallsGETApiPermissionTestKiraStackKiraApi54A8B8B3GETcalls05E2EBA4": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "ApiHandler5E7490E8",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":execute-api:us-east-1:480421269472:",
+       {
+        "Ref": "KiraApiDE592999"
+       },
+       "/test-invoke-stage/GET/calls"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "KiraStack/KiraApi/Default/calls/GET/ApiPermission.Test.KiraStackKiraApi54A8B8B3.GET..calls"
+   }
+  },
+  "KiraApicallsGET4A9D7825": {
+   "Type": "AWS::ApiGateway::Method",
+   "Properties": {
+    "AuthorizationType": "COGNITO_USER_POOLS",
+    "AuthorizerId": {
+     "Ref": "KiraAuthorizer7DE45903"
+    },
+    "HttpMethod": "GET",
+    "Integration": {
+     "IntegrationHttpMethod": "POST",
+     "Type": "AWS_PROXY",
+     "Uri": {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":apigateway:us-east-1:lambda:path/2015-03-31/functions/",
+        {
+         "Fn::GetAtt": [
+          "ApiHandler5E7490E8",
+          "Arn"
+         ]
+        },
+        "/invocations"
+       ]
+      ]
+     }
+    },
+    "ResourceId": {
+     "Ref": "KiraApicalls5966FF2C"
+    },
+    "RestApiId": {
+     "Ref": "KiraApiDE592999"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "KiraStack/KiraApi/Default/calls/GET/Resource"
+   }
+  },
+  "KiraApicallsPOSTApiPermissionKiraStackKiraApi54A8B8B3POSTcalls4F193BB0": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "ApiHandler5E7490E8",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":execute-api:us-east-1:480421269472:",
+       {
+        "Ref": "KiraApiDE592999"
+       },
+       "/",
+       {
+        "Ref": "KiraApiDeploymentStageprod19007D51"
+       },
+       "/POST/calls"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "KiraStack/KiraApi/Default/calls/POST/ApiPermission.KiraStackKiraApi54A8B8B3.POST..calls"
+   }
+  },
+  "KiraApicallsPOSTApiPermissionTestKiraStackKiraApi54A8B8B3POSTcallsA6FFDE40": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "ApiHandler5E7490E8",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":execute-api:us-east-1:480421269472:",
+       {
+        "Ref": "KiraApiDE592999"
+       },
+       "/test-invoke-stage/POST/calls"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "KiraStack/KiraApi/Default/calls/POST/ApiPermission.Test.KiraStackKiraApi54A8B8B3.POST..calls"
+   }
+  },
+  "KiraApicallsPOST8590D371": {
+   "Type": "AWS::ApiGateway::Method",
+   "Properties": {
+    "AuthorizationType": "COGNITO_USER_POOLS",
+    "AuthorizerId": {
+     "Ref": "KiraAuthorizer7DE45903"
+    },
+    "HttpMethod": "POST",
+    "Integration": {
+     "IntegrationHttpMethod": "POST",
+     "Type": "AWS_PROXY",
+     "Uri": {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":apigateway:us-east-1:lambda:path/2015-03-31/functions/",
+        {
+         "Fn::GetAtt": [
+          "ApiHandler5E7490E8",
+          "Arn"
+         ]
+        },
+        "/invocations"
+       ]
+      ]
+     }
+    },
+    "ResourceId": {
+     "Ref": "KiraApicalls5966FF2C"
+    },
+    "RestApiId": {
+     "Ref": "KiraApiDE592999"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "KiraStack/KiraApi/Default/calls/POST/Resource"
+   }
+  },
+  "KiraApicallscallIdA38629B2": {
+   "Type": "AWS::ApiGateway::Resource",
+   "Properties": {
+    "ParentId": {
+     "Ref": "KiraApicalls5966FF2C"
+    },
+    "PathPart": "{callId}",
+    "RestApiId": {
+     "Ref": "KiraApiDE592999"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "KiraStack/KiraApi/Default/calls/{callId}/Resource"
+   }
+  },
+  "KiraApicallscallIdOPTIONSFA891AE0": {
+   "Type": "AWS::ApiGateway::Method",
+   "Properties": {
+    "ApiKeyRequired": false,
+    "AuthorizationType": "NONE",
+    "HttpMethod": "OPTIONS",
+    "Integration": {
+     "IntegrationResponses": [
+      {
+       "ResponseParameters": {
+        "method.response.header.Access-Control-Allow-Headers": "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Amz-User-Agent'",
+        "method.response.header.Access-Control-Allow-Origin": "'*'",
+        "method.response.header.Access-Control-Allow-Methods": "'OPTIONS,GET,PUT,POST,DELETE,PATCH,HEAD'"
+       },
+       "StatusCode": "204"
+      }
+     ],
+     "RequestTemplates": {
+      "application/json": "{ statusCode: 200 }"
+     },
+     "Type": "MOCK"
+    },
+    "MethodResponses": [
+     {
+      "ResponseParameters": {
+       "method.response.header.Access-Control-Allow-Headers": true,
+       "method.response.header.Access-Control-Allow-Origin": true,
+       "method.response.header.Access-Control-Allow-Methods": true
+      },
+      "StatusCode": "204"
+     }
+    ],
+    "ResourceId": {
+     "Ref": "KiraApicallscallIdA38629B2"
+    },
+    "RestApiId": {
+     "Ref": "KiraApiDE592999"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "KiraStack/KiraApi/Default/calls/{callId}/OPTIONS/Resource"
+   }
+  },
+  "KiraApicallscallIdGETApiPermissionKiraStackKiraApi54A8B8B3GETcallscallId30B3159F": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "ApiHandler5E7490E8",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":execute-api:us-east-1:480421269472:",
+       {
+        "Ref": "KiraApiDE592999"
+       },
+       "/",
+       {
+        "Ref": "KiraApiDeploymentStageprod19007D51"
+       },
+       "/GET/calls/*"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "KiraStack/KiraApi/Default/calls/{callId}/GET/ApiPermission.KiraStackKiraApi54A8B8B3.GET..calls.{callId}"
+   }
+  },
+  "KiraApicallscallIdGETApiPermissionTestKiraStackKiraApi54A8B8B3GETcallscallIdCE97E538": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "ApiHandler5E7490E8",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":execute-api:us-east-1:480421269472:",
+       {
+        "Ref": "KiraApiDE592999"
+       },
+       "/test-invoke-stage/GET/calls/*"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "KiraStack/KiraApi/Default/calls/{callId}/GET/ApiPermission.Test.KiraStackKiraApi54A8B8B3.GET..calls.{callId}"
+   }
+  },
+  "KiraApicallscallIdGET32290C80": {
+   "Type": "AWS::ApiGateway::Method",
+   "Properties": {
+    "AuthorizationType": "COGNITO_USER_POOLS",
+    "AuthorizerId": {
+     "Ref": "KiraAuthorizer7DE45903"
+    },
+    "HttpMethod": "GET",
+    "Integration": {
+     "IntegrationHttpMethod": "POST",
+     "Type": "AWS_PROXY",
+     "Uri": {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":apigateway:us-east-1:lambda:path/2015-03-31/functions/",
+        {
+         "Fn::GetAtt": [
+          "ApiHandler5E7490E8",
+          "Arn"
+         ]
+        },
+        "/invocations"
+       ]
+      ]
+     }
+    },
+    "ResourceId": {
+     "Ref": "KiraApicallscallIdA38629B2"
+    },
+    "RestApiId": {
+     "Ref": "KiraApiDE592999"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "KiraStack/KiraApi/Default/calls/{callId}/GET/Resource"
+   }
+  },
+  "KiraApisearch103CBCAF": {
+   "Type": "AWS::ApiGateway::Resource",
+   "Properties": {
+    "ParentId": {
+     "Fn::GetAtt": [
+      "KiraApiDE592999",
+      "RootResourceId"
+     ]
+    },
+    "PathPart": "search",
+    "RestApiId": {
+     "Ref": "KiraApiDE592999"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "KiraStack/KiraApi/Default/search/Resource"
+   }
+  },
+  "KiraApisearchOPTIONSF63FD9B4": {
+   "Type": "AWS::ApiGateway::Method",
+   "Properties": {
+    "ApiKeyRequired": false,
+    "AuthorizationType": "NONE",
+    "HttpMethod": "OPTIONS",
+    "Integration": {
+     "IntegrationResponses": [
+      {
+       "ResponseParameters": {
+        "method.response.header.Access-Control-Allow-Headers": "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Amz-User-Agent'",
+        "method.response.header.Access-Control-Allow-Origin": "'*'",
+        "method.response.header.Access-Control-Allow-Methods": "'OPTIONS,GET,PUT,POST,DELETE,PATCH,HEAD'"
+       },
+       "StatusCode": "204"
+      }
+     ],
+     "RequestTemplates": {
+      "application/json": "{ statusCode: 200 }"
+     },
+     "Type": "MOCK"
+    },
+    "MethodResponses": [
+     {
+      "ResponseParameters": {
+       "method.response.header.Access-Control-Allow-Headers": true,
+       "method.response.header.Access-Control-Allow-Origin": true,
+       "method.response.header.Access-Control-Allow-Methods": true
+      },
+      "StatusCode": "204"
+     }
+    ],
+    "ResourceId": {
+     "Ref": "KiraApisearch103CBCAF"
+    },
+    "RestApiId": {
+     "Ref": "KiraApiDE592999"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "KiraStack/KiraApi/Default/search/OPTIONS/Resource"
+   }
+  },
+  "KiraApisearchPOSTApiPermissionKiraStackKiraApi54A8B8B3POSTsearch3DE6E6B1": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "SearchHandler00CE2B50",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":execute-api:us-east-1:480421269472:",
+       {
+        "Ref": "KiraApiDE592999"
+       },
+       "/",
+       {
+        "Ref": "KiraApiDeploymentStageprod19007D51"
+       },
+       "/POST/search"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "KiraStack/KiraApi/Default/search/POST/ApiPermission.KiraStackKiraApi54A8B8B3.POST..search"
+   }
+  },
+  "KiraApisearchPOSTApiPermissionTestKiraStackKiraApi54A8B8B3POSTsearchB049FE63": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "SearchHandler00CE2B50",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":execute-api:us-east-1:480421269472:",
+       {
+        "Ref": "KiraApiDE592999"
+       },
+       "/test-invoke-stage/POST/search"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "KiraStack/KiraApi/Default/search/POST/ApiPermission.Test.KiraStackKiraApi54A8B8B3.POST..search"
+   }
+  },
+  "KiraApisearchPOST68D88F3D": {
+   "Type": "AWS::ApiGateway::Method",
+   "Properties": {
+    "AuthorizationType": "COGNITO_USER_POOLS",
+    "AuthorizerId": {
+     "Ref": "KiraAuthorizer7DE45903"
+    },
+    "HttpMethod": "POST",
+    "Integration": {
+     "IntegrationHttpMethod": "POST",
+     "Type": "AWS_PROXY",
+     "Uri": {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":apigateway:us-east-1:lambda:path/2015-03-31/functions/",
+        {
+         "Fn::GetAtt": [
+          "SearchHandler00CE2B50",
+          "Arn"
+         ]
+        },
+        "/invocations"
+       ]
+      ]
+     }
+    },
+    "ResourceId": {
+     "Ref": "KiraApisearch103CBCAF"
+    },
+    "RestApiId": {
+     "Ref": "KiraApiDE592999"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "KiraStack/KiraApi/Default/search/POST/Resource"
+   }
+  },
+  "KiraAuthorizer7DE45903": {
+   "Type": "AWS::ApiGateway::Authorizer",
+   "Properties": {
+    "IdentitySource": "method.request.header.Authorization",
+    "Name": "KiraStackKiraAuthorizer5272DE65",
+    "ProviderARNs": [
+     {
+      "Fn::GetAtt": [
+       "KiraUserPool4AE50047",
+       "Arn"
+      ]
+     }
+    ],
+    "RestApiId": {
+     "Ref": "KiraApiDE592999"
+    },
+    "Type": "COGNITO_USER_POOLS"
+   },
+   "Metadata": {
+    "aws:cdk:path": "KiraStack/KiraAuthorizer/Resource"
+   }
+  },
+  "DashboardBucket5758873D": {
+   "Type": "AWS::S3::Bucket",
+   "Properties": {
+    "BucketEncryption": {
+     "ServerSideEncryptionConfiguration": [
+      {
+       "ServerSideEncryptionByDefault": {
+        "SSEAlgorithm": "AES256"
+       }
+      }
+     ]
+    },
+    "BucketName": "kira-dashboard-480421269472",
+    "PublicAccessBlockConfiguration": {
+     "BlockPublicAcls": true,
+     "BlockPublicPolicy": true,
+     "IgnorePublicAcls": true,
+     "RestrictPublicBuckets": true
+    },
+    "Tags": [
+     {
+      "Key": "aws-cdk:auto-delete-objects",
+      "Value": "true"
+     }
+    ]
+   },
+   "UpdateReplacePolicy": "Delete",
+   "DeletionPolicy": "Delete",
+   "Metadata": {
+    "aws:cdk:path": "KiraStack/DashboardBucket/Resource"
+   }
+  },
+  "DashboardBucketPolicy899268BC": {
+   "Type": "AWS::S3::BucketPolicy",
+   "Properties": {
+    "Bucket": {
+     "Ref": "DashboardBucket5758873D"
+    },
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": [
+        "s3:PutBucketPolicy",
+        "s3:GetBucket*",
+        "s3:List*",
+        "s3:DeleteObject*"
+       ],
+       "Effect": "Allow",
+       "Principal": {
+        "AWS": {
+         "Fn::GetAtt": [
+          "CustomS3AutoDeleteObjectsCustomResourceProviderRole3B1BD092",
+          "Arn"
+         ]
+        }
+       },
+       "Resource": [
+        {
+         "Fn::GetAtt": [
+          "DashboardBucket5758873D",
+          "Arn"
+         ]
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::GetAtt": [
+             "DashboardBucket5758873D",
+             "Arn"
+            ]
+           },
+           "/*"
+          ]
+         ]
+        }
+       ]
+      },
+      {
+       "Action": "s3:GetObject",
+       "Effect": "Allow",
+       "Principal": {
+        "CanonicalUser": {
+         "Fn::GetAtt": [
+          "DashboardCDNOrigin1S3Origin3D0D8BCE",
+          "S3CanonicalUserId"
+         ]
+        }
+       },
+       "Resource": {
+        "Fn::Join": [
+         "",
+         [
+          {
+           "Fn::GetAtt": [
+            "DashboardBucket5758873D",
+            "Arn"
+           ]
+          },
+          "/*"
+         ]
+        ]
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "KiraStack/DashboardBucket/Policy/Resource"
+   }
+  },
+  "DashboardBucketAutoDeleteObjectsCustomResource0A022D13": {
+   "Type": "Custom::S3AutoDeleteObjects",
+   "Properties": {
+    "ServiceToken": {
+     "Fn::GetAtt": [
+      "CustomS3AutoDeleteObjectsCustomResourceProviderHandler9D90184F",
+      "Arn"
+     ]
+    },
+    "BucketName": {
+     "Ref": "DashboardBucket5758873D"
+    }
+   },
+   "DependsOn": [
+    "DashboardBucketPolicy899268BC"
+   ],
+   "UpdateReplacePolicy": "Delete",
+   "DeletionPolicy": "Delete",
+   "Metadata": {
+    "aws:cdk:path": "KiraStack/DashboardBucket/AutoDeleteObjectsCustomResource/Default"
+   }
+  },
+  "CustomS3AutoDeleteObjectsCustomResourceProviderRole3B1BD092": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Version": "2012-10-17",
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "lambda.amazonaws.com"
+       }
+      }
+     ]
+    },
+    "ManagedPolicyArns": [
+     {
+      "Fn::Sub": "arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "KiraStack/Custom::S3AutoDeleteObjectsCustomResourceProvider/Role"
+   }
+  },
+  "CustomS3AutoDeleteObjectsCustomResourceProviderHandler9D90184F": {
+   "Type": "AWS::Lambda::Function",
+   "Properties": {
+    "Code": {
+     "S3Bucket": "cdk-hnb659fds-assets-480421269472-us-east-1",
+     "S3Key": "faa95a81ae7d7373f3e1f242268f904eb748d8d0fdd306e8a6fe515a1905a7d6.zip"
+    },
+    "Timeout": 900,
+    "MemorySize": 128,
+    "Handler": "index.handler",
+    "Role": {
+     "Fn::GetAtt": [
+      "CustomS3AutoDeleteObjectsCustomResourceProviderRole3B1BD092",
+      "Arn"
+     ]
+    },
+    "Runtime": "nodejs24.x",
+    "Description": {
+     "Fn::Join": [
+      "",
+      [
+       "Lambda function for auto-deleting objects in ",
+       {
+        "Ref": "DashboardBucket5758873D"
+       },
+       " S3 bucket."
+      ]
+     ]
+    }
+   },
+   "DependsOn": [
+    "CustomS3AutoDeleteObjectsCustomResourceProviderRole3B1BD092"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "KiraStack/Custom::S3AutoDeleteObjectsCustomResourceProvider/Handler",
+    "aws:asset:path": "asset.faa95a81ae7d7373f3e1f242268f904eb748d8d0fdd306e8a6fe515a1905a7d6",
+    "aws:asset:property": "Code"
+   }
+  },
+  "DashboardCDNOrigin1S3Origin3D0D8BCE": {
+   "Type": "AWS::CloudFront::CloudFrontOriginAccessIdentity",
+   "Properties": {
+    "CloudFrontOriginAccessIdentityConfig": {
+     "Comment": "Identity for KiraStackDashboardCDNOrigin1BD477836"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "KiraStack/DashboardCDN/Origin1/S3Origin/Resource"
+   }
+  },
+  "DashboardCDN609428BE": {
+   "Type": "AWS::CloudFront::Distribution",
+   "Properties": {
+    "DistributionConfig": {
+     "CustomErrorResponses": [
+      {
+       "ErrorCode": 403,
+       "ResponseCode": 200,
+       "ResponsePagePath": "/index.html"
+      },
+      {
+       "ErrorCode": 404,
+       "ResponseCode": 200,
+       "ResponsePagePath": "/index.html"
+      }
+     ],
+     "DefaultCacheBehavior": {
+      "CachePolicyId": "658327ea-f89d-4fab-a63d-7e88639e58f6",
+      "Compress": true,
+      "TargetOriginId": "KiraStackDashboardCDNOrigin1BD477836",
+      "ViewerProtocolPolicy": "redirect-to-https"
+     },
+     "DefaultRootObject": "index.html",
+     "Enabled": true,
+     "HttpVersion": "http2",
+     "IPV6Enabled": true,
+     "Origins": [
+      {
+       "DomainName": {
+        "Fn::GetAtt": [
+         "DashboardBucket5758873D",
+         "RegionalDomainName"
+        ]
+       },
+       "Id": "KiraStackDashboardCDNOrigin1BD477836",
+       "S3OriginConfig": {
+        "OriginAccessIdentity": {
+         "Fn::Join": [
+          "",
+          [
+           "origin-access-identity/cloudfront/",
+           {
+            "Ref": "DashboardCDNOrigin1S3Origin3D0D8BCE"
+           }
+          ]
+         ]
+        }
+       }
+      }
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "KiraStack/DashboardCDN/Resource"
+   }
+  },
+  "SearchHandlerServiceRoleB55CE200": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "lambda.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "ManagedPolicyArns": [
+     {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+       ]
+      ]
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "KiraStack/SearchHandler/ServiceRole/Resource"
+   }
+  },
+  "SearchHandlerServiceRoleDefaultPolicy154F2B3D": {
+   "Type": "AWS::IAM::Policy",
+   "Properties": {
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": [
+        "dynamodb:BatchGetItem",
+        "dynamodb:Query",
+        "dynamodb:GetItem",
+        "dynamodb:Scan",
+        "dynamodb:ConditionCheckItem",
+        "dynamodb:DescribeTable"
+       ],
+       "Effect": "Allow",
+       "Resource": [
+        {
+         "Fn::GetAtt": [
+          "CallsTableD3962D26",
+          "Arn"
+         ]
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::GetAtt": [
+             "CallsTableD3962D26",
+             "Arn"
+            ]
+           },
+           "/index/*"
+          ]
+         ]
+        }
+       ]
+      },
+      {
+       "Action": [
+        "dynamodb:GetRecords",
+        "dynamodb:GetShardIterator"
+       ],
+       "Effect": "Allow",
+       "Resource": [
+        {
+         "Fn::GetAtt": [
+          "CallsTableD3962D26",
+          "Arn"
+         ]
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::GetAtt": [
+             "CallsTableD3962D26",
+             "Arn"
+            ]
+           },
+           "/index/*"
+          ]
+         ]
+        }
+       ]
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "PolicyName": "SearchHandlerServiceRoleDefaultPolicy154F2B3D",
+    "Roles": [
+     {
+      "Ref": "SearchHandlerServiceRoleB55CE200"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "KiraStack/SearchHandler/ServiceRole/DefaultPolicy/Resource"
+   }
+  },
+  "SearchHandler00CE2B50": {
+   "Type": "AWS::Lambda::Function",
+   "Properties": {
+    "Code": {
+     "ZipFile": "\n        const { DynamoDBClient, QueryCommand } = require('@aws-sdk/client-dynamodb');\n        const { unmarshall } = require('@aws-sdk/util-dynamodb');\n        const client = new DynamoDBClient({});\n\n        exports.handler = async (event) => {\n          const { userId, query } = JSON.parse(event.body || '{}');\n          if (!userId || !query) {\n            return { statusCode: 400, body: JSON.stringify({ error: 'userId and query required' }) };\n          }\n\n          // Query all calls for user then filter client-side (DynamoDB doesn't have FTS)\n          const result = await client.send(new QueryCommand({\n            TableName: process.env.CALLS_TABLE,\n            KeyConditionExpression: 'userId = :uid',\n            ExpressionAttributeValues: { ':uid': { S: userId } },\n          }));\n\n          const items = (result.Items || []).map(item => unmarshall(item));\n          const terms = query.toLowerCase().split(/\\s+/);\n\n          const matches = items.filter(item => {\n            const searchable = JSON.stringify(item).toLowerCase();\n            return terms.every(t => searchable.includes(t));\n          }).slice(0, 20);\n\n          return {\n            statusCode: 200,\n            headers: { 'Content-Type': 'application/json' },\n            body: JSON.stringify({ results: matches, total: matches.length }),\n          };\n        };\n      "
+    },
+    "Environment": {
+     "Variables": {
+      "CALLS_TABLE": {
+       "Ref": "CallsTableD3962D26"
+      }
+     }
+    },
+    "FunctionName": "kira-search",
+    "Handler": "index.handler",
+    "MemorySize": 256,
+    "Role": {
+     "Fn::GetAtt": [
+      "SearchHandlerServiceRoleB55CE200",
+      "Arn"
+     ]
+    },
+    "Runtime": "nodejs20.x",
+    "Timeout": 15
+   },
+   "DependsOn": [
+    "SearchHandlerServiceRoleDefaultPolicy154F2B3D",
+    "SearchHandlerServiceRoleB55CE200"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "KiraStack/SearchHandler/Resource"
+   }
+  },
+  "CDKMetadata": {
+   "Type": "AWS::CDK::Metadata",
+   "Properties": {
+    "Analytics": "v2:deflate64:H4sIAAAAAAAA/3VQwW7bMAz9luasqF0K9LBbmqLADkWDZDsVxSDLrMvGEgORapYK+vdBstO4wAYY4CMf6feeFnpx801fXZgDz227m/fY6LQVY3fKHPh3ao/eOGobnX6apge1evEVZMXXOt1GuwMpwxENZU092uN5PPRPaebwD/rZ99lUrcjwta4U6+nBVoyAAy88y89ZWeo8Cun0iyGsifoi8IlPYNUjeJlSwySr3rimNTrdR28FyZedKV5DcMiM5LNC43Ta0BC41nOmAWVl9tgZgYM56rQBluUe6/YZLq2l6EXdwb6noxt9TbqtmK5KDGADTDFYuDUM6gHkldpCjujEjiIjHh7llJWXUV4p4AeEauCzy8r2FNuXQF50ukOWgE2s0R8Ddli8AvOPFryg1JyrcnBfDv63Mf1Nzl8MPkbZR1GryELu386/UOtA79hCqNGXzCDlSdB3WXlqQb/x5fviSpfv4o0R5yF6QQd6M9S/bsIJesgCAAA="
+   },
+   "Metadata": {
+    "aws:cdk:path": "KiraStack/CDKMetadata/Default"
+   }
+  }
+ },
+ "Outputs": {
+  "KiraApiEndpoint52212150": {
+   "Value": {
+    "Fn::Join": [
+     "",
+     [
+      "https://",
+      {
+       "Ref": "KiraApiDE592999"
+      },
+      ".execute-api.us-east-1.",
+      {
+       "Ref": "AWS::URLSuffix"
+      },
+      "/",
+      {
+       "Ref": "KiraApiDeploymentStageprod19007D51"
+      },
+      "/"
+     ]
+    ]
+   }
+  },
+  "ApiUrl": {
+   "Value": {
+    "Fn::Join": [
+     "",
+     [
+      "https://",
+      {
+       "Ref": "KiraApiDE592999"
+      },
+      ".execute-api.us-east-1.",
+      {
+       "Ref": "AWS::URLSuffix"
+      },
+      "/",
+      {
+       "Ref": "KiraApiDeploymentStageprod19007D51"
+      },
+      "/"
+     ]
+    ]
+   }
+  },
+  "UserPoolId": {
+   "Value": {
+    "Ref": "KiraUserPool4AE50047"
+   }
+  },
+  "UserPoolClientId": {
+   "Value": {
+    "Ref": "KiraUserPoolKiraDesktopClient45AA0837"
+   }
+  },
+  "TranscriptsBucketName": {
+   "Value": {
+    "Ref": "TranscriptsBucketF640F863"
+   }
+  },
+  "DashboardUrl": {
+   "Value": {
+    "Fn::Join": [
+     "",
+     [
+      "https://",
+      {
+       "Fn::GetAtt": [
+        "DashboardCDN609428BE",
+        "DomainName"
+       ]
+      }
+     ]
+    ]
+   }
+  },
+  "DashboardBucketName": {
+   "Value": {
+    "Ref": "DashboardBucket5758873D"
+   }
+  }
+ },
+ "Parameters": {
+  "BootstrapVersion": {
+   "Type": "AWS::SSM::Parameter::Value<String>",
+   "Default": "/cdk-bootstrap/hnb659fds/version",
+   "Description": "Version of the CDK Bootstrap resources in this environment, automatically retrieved from SSM Parameter Store. [cdk:skip]"
+  }
+ },
+ "Rules": {
+  "CheckBootstrapVersion": {
+   "Assertions": [
+    {
+     "Assert": {
+      "Fn::Not": [
+       {
+        "Fn::Contains": [
+         [
+          "1",
+          "2",
+          "3",
+          "4",
+          "5"
+         ],
+         {
+          "Ref": "BootstrapVersion"
+         }
+        ]
+       }
+      ]
+     },
+     "AssertDescription": "CDK bootstrap stack version 6 required. Please run 'cdk bootstrap' with a recent version of the CDK CLI."
+    }
+   ]
+  }
+ }
+}

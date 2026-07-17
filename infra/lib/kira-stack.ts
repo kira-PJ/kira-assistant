@@ -5,7 +5,7 @@ import * as cognito from 'aws-cdk-lib/aws-cognito';
 import * as apigateway from 'aws-cdk-lib/aws-apigateway';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as cloudfront from 'aws-cdk-lib/aws-cloudfront';
-import * as origins from 'aws-cdk-lib/aws-cloudfront-origins';
+import * as cloudfront_origins from 'aws-cdk-lib/aws-cloudfront-origins';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import { Construct } from 'constructs';
 
@@ -169,7 +169,7 @@ export class KiraStack extends cdk.Stack {
 
     const distribution = new cloudfront.Distribution(this, 'DashboardCDN', {
       defaultBehavior: {
-        origin: origins.S3BucketOrigin.withOriginAccessControl(dashboardBucket),
+        origin: new cloudfront_origins.S3Origin(dashboardBucket),
         viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
         cachePolicy: cloudfront.CachePolicy.CACHING_OPTIMIZED,
       },
@@ -247,7 +247,7 @@ export class KiraStack extends cdk.Stack {
     new cdk.CfnOutput(this, 'ApiUrl', { value: api.url });
     new cdk.CfnOutput(this, 'UserPoolId', { value: userPool.userPoolId });
     new cdk.CfnOutput(this, 'UserPoolClientId', { value: userPoolClient.userPoolClientId });
-    new cdk.CfnOutput(this, 'TranscriptsBucket', { value: transcriptsBucket.bucketName });
+    new cdk.CfnOutput(this, 'TranscriptsBucketName', { value: transcriptsBucket.bucketName });
     new cdk.CfnOutput(this, 'DashboardUrl', { value: `https://${distribution.domainName}` });
     new cdk.CfnOutput(this, 'DashboardBucketName', { value: dashboardBucket.bucketName });
   }

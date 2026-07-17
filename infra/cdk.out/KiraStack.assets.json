@@ -1,0 +1,36 @@
+{
+  "version": "54.0.0",
+  "files": {
+    "faa95a81ae7d7373f3e1f242268f904eb748d8d0fdd306e8a6fe515a1905a7d6": {
+      "displayName": "KiraStack/Custom::S3AutoDeleteObjectsCustomResourceProvider Code",
+      "source": {
+        "path": "asset.faa95a81ae7d7373f3e1f242268f904eb748d8d0fdd306e8a6fe515a1905a7d6",
+        "packaging": "zip"
+      },
+      "destinations": {
+        "480421269472-us-east-1-60170e93": {
+          "bucketName": "cdk-hnb659fds-assets-480421269472-us-east-1",
+          "objectKey": "faa95a81ae7d7373f3e1f242268f904eb748d8d0fdd306e8a6fe515a1905a7d6.zip",
+          "region": "us-east-1",
+          "assumeRoleArn": "arn:${AWS::Partition}:iam::480421269472:role/cdk-hnb659fds-file-publishing-role-480421269472-us-east-1"
+        }
+      }
+    },
+    "fbbdbc0750bddce448ffc49d52b845ebfc75fafe3405ce03d0a29dc87ab0d325": {
+      "displayName": "KiraStack Template",
+      "source": {
+        "path": "KiraStack.template.json",
+        "packaging": "file"
+      },
+      "destinations": {
+        "480421269472-us-east-1-7df12b83": {
+          "bucketName": "cdk-hnb659fds-assets-480421269472-us-east-1",
+          "objectKey": "fbbdbc0750bddce448ffc49d52b845ebfc75fafe3405ce03d0a29dc87ab0d325.json",
+          "region": "us-east-1",
+          "assumeRoleArn": "arn:${AWS::Partition}:iam::480421269472:role/cdk-hnb659fds-file-publishing-role-480421269472-us-east-1"
+        }
+      }
+    }
+  },
+  "dockerImages": {}
+}

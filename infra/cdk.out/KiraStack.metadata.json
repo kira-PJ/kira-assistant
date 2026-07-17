@@ -1,0 +1,835 @@
+{
+  "/KiraStack": [
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "<anonymous> (/home/pauline/kira/ghost-assistant/infra/bin/kira-infra.ts:7:1)",
+        "...node internals, ts-node, ts-node, ts-node..."
+      ]
+    }
+  ],
+  "/KiraStack/CallsTable": [
+    {
+      "type": "aws:cdk:hasPhysicalName",
+      "data": {
+        "Ref": "CallsTableD3962D26"
+      }
+    }
+  ],
+  "/KiraStack/UsersTable": [
+    {
+      "type": "aws:cdk:hasPhysicalName",
+      "data": {
+        "Ref": "UsersTable9725E9C8"
+      }
+    }
+  ],
+  "/KiraStack/LearningTable": [
+    {
+      "type": "aws:cdk:hasPhysicalName",
+      "data": {
+        "Ref": "LearningTableEF207AA9"
+      }
+    }
+  ],
+  "/KiraStack/Custom::S3AutoDeleteObjectsCustomResourceProvider": [
+    {
+      "type": "aws:cdk:is-custom-resource-handler-customResourceProvider",
+      "data": true
+    }
+  ],
+  "/KiraStack/ApiUrl": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "ApiUrl"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:247:5)",
+        "<anonymous> (/home/pauline/kira/ghost-assistant/infra/bin/kira-infra.ts:7:1)",
+        "...node internals, ts-node, ts-node, ts-node..."
+      ]
+    }
+  ],
+  "/KiraStack/UserPoolId": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "UserPoolId"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:248:5)",
+        "<anonymous> (/home/pauline/kira/ghost-assistant/infra/bin/kira-infra.ts:7:1)",
+        "...node internals, ts-node, ts-node, ts-node..."
+      ]
+    }
+  ],
+  "/KiraStack/UserPoolClientId": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "UserPoolClientId"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:249:5)",
+        "<anonymous> (/home/pauline/kira/ghost-assistant/infra/bin/kira-infra.ts:7:1)",
+        "...node internals, ts-node, ts-node, ts-node..."
+      ]
+    }
+  ],
+  "/KiraStack/TranscriptsBucketName": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "TranscriptsBucketName"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:250:5)",
+        "<anonymous> (/home/pauline/kira/ghost-assistant/infra/bin/kira-infra.ts:7:1)",
+        "...node internals, ts-node, ts-node, ts-node..."
+      ]
+    }
+  ],
+  "/KiraStack/DashboardUrl": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "DashboardUrl"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:251:5)",
+        "<anonymous> (/home/pauline/kira/ghost-assistant/infra/bin/kira-infra.ts:7:1)",
+        "...node internals, ts-node, ts-node, ts-node..."
+      ]
+    }
+  ],
+  "/KiraStack/DashboardBucketName": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "DashboardBucketName"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:252:5)",
+        "<anonymous> (/home/pauline/kira/ghost-assistant/infra/bin/kira-infra.ts:7:1)",
+        "...node internals, ts-node, ts-node, ts-node..."
+      ]
+    }
+  ],
+  "/KiraStack/BootstrapVersion": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "BootstrapVersion"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...aws-cdk-lib...",
+        "(no user code in 10 frames, use --stack-trace-limit to capture more)"
+      ]
+    }
+  ],
+  "/KiraStack/CheckBootstrapVersion": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "CheckBootstrapVersion"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...aws-cdk-lib...",
+        "(no user code in 10 frames, use --stack-trace-limit to capture more)"
+      ]
+    }
+  ],
+  "/KiraStack/CallsTable/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "CallsTableD3962D26"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new Table2 in aws-cdk-lib...",
+        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:18:24)",
+        "<anonymous> (/home/pauline/kira/ghost-assistant/infra/bin/kira-infra.ts:7:1)",
+        "...node internals, ts-node, ts-node..."
+      ]
+    }
+  ],
+  "/KiraStack/UsersTable/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "UsersTable9725E9C8"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new Table2 in aws-cdk-lib...",
+        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:35:24)",
+        "<anonymous> (/home/pauline/kira/ghost-assistant/infra/bin/kira-infra.ts:7:1)",
+        "...node internals, ts-node, ts-node..."
+      ]
+    }
+  ],
+  "/KiraStack/LearningTable/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "LearningTableEF207AA9"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new Table2 in aws-cdk-lib...",
+        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:42:27)",
+        "<anonymous> (/home/pauline/kira/ghost-assistant/infra/bin/kira-infra.ts:7:1)",
+        "...node internals, ts-node, ts-node..."
+      ]
+    }
+  ],
+  "/KiraStack/TranscriptsBucket/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "TranscriptsBucketF640F863"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new Bucket2 in aws-cdk-lib...",
+        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:52:31)",
+        "<anonymous> (/home/pauline/kira/ghost-assistant/infra/bin/kira-infra.ts:7:1)",
+        "...node internals, ts-node, ts-node..."
+      ]
+    }
+  ],
+  "/KiraStack/KiraUserPool/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "KiraUserPool4AE50047"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new UserPool2 in aws-cdk-lib...",
+        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:71:22)",
+        "<anonymous> (/home/pauline/kira/ghost-assistant/infra/bin/kira-infra.ts:7:1)",
+        "...node internals, ts-node, ts-node..."
+      ]
+    }
+  ],
+  "/KiraStack/ApiHandler/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "ApiHandler5E7490E8"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new Function2 in aws-cdk-lib...",
+        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:97:24)",
+        "<anonymous> (/home/pauline/kira/ghost-assistant/infra/bin/kira-infra.ts:7:1)",
+        "...node internals, ts-node, ts-node..."
+      ]
+    }
+  ],
+  "/KiraStack/KiraApi/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "KiraApiDE592999"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new RestApi2 in aws-cdk-lib...",
+        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:129:17)",
+        "<anonymous> (/home/pauline/kira/ghost-assistant/infra/bin/kira-infra.ts:7:1)",
+        "...node internals, ts-node, ts-node..."
+      ]
+    }
+  ],
+  "/KiraStack/KiraApi/Account": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "KiraApiAccount5E06A8A0"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new RestApi2 in aws-cdk-lib...",
+        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:129:17)",
+        "<anonymous> (/home/pauline/kira/ghost-assistant/infra/bin/kira-infra.ts:7:1)",
+        "...node internals, ts-node, ts-node..."
+      ]
+    }
+  ],
+  "/KiraStack/KiraApi/Endpoint": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "KiraApiEndpoint52212150"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new RestApi2 in aws-cdk-lib...",
+        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:129:17)",
+        "<anonymous> (/home/pauline/kira/ghost-assistant/infra/bin/kira-infra.ts:7:1)",
+        "...node internals, ts-node, ts-node..."
+      ]
+    }
+  ],
+  "/KiraStack/KiraAuthorizer/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "KiraAuthorizer7DE45903"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new CognitoUserPoolsAuthorizer2 in aws-cdk-lib...",
+        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:138:24)",
+        "<anonymous> (/home/pauline/kira/ghost-assistant/infra/bin/kira-infra.ts:7:1)",
+        "...node internals, ts-node, ts-node..."
+      ]
+    }
+  ],
+  "/KiraStack/DashboardBucket/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "DashboardBucket5758873D"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new Bucket2 in aws-cdk-lib...",
+        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:162:29)",
+        "<anonymous> (/home/pauline/kira/ghost-assistant/infra/bin/kira-infra.ts:7:1)",
+        "...node internals, ts-node, ts-node..."
+      ]
+    },
+    {
+      "type": "aws:cdk:analytics:mixin",
+      "data": {
+        "mixin": "aws-cdk-lib.aws_s3.mixins.BucketAutoDeleteObjects"
+      }
+    }
+  ],
+  "/KiraStack/Custom::S3AutoDeleteObjectsCustomResourceProvider/Role": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "CustomS3AutoDeleteObjectsCustomResourceProviderRole3B1BD092"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...aws-cdk-lib...",
+        "(no user code in 10 frames, use --stack-trace-limit to capture more)"
+      ]
+    }
+  ],
+  "/KiraStack/Custom::S3AutoDeleteObjectsCustomResourceProvider/Handler": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "CustomS3AutoDeleteObjectsCustomResourceProviderHandler9D90184F"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...aws-cdk-lib...",
+        "(no user code in 10 frames, use --stack-trace-limit to capture more)"
+      ]
+    }
+  ],
+  "/KiraStack/DashboardCDN/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "DashboardCDN609428BE"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new Distribution2 in aws-cdk-lib...",
+        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:170:26)",
+        "<anonymous> (/home/pauline/kira/ghost-assistant/infra/bin/kira-infra.ts:7:1)",
+        "...node internals, ts-node, ts-node..."
+      ]
+    }
+  ],
+  "/KiraStack/SearchHandler/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "SearchHandler00CE2B50"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new Function2 in aws-cdk-lib...",
+        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:193:27)",
+        "<anonymous> (/home/pauline/kira/ghost-assistant/infra/bin/kira-infra.ts:7:1)",
+        "...node internals, ts-node, ts-node..."
+      ]
+    }
+  ],
+  "/KiraStack/CDKMetadata/Default": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "CDKMetadata"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...aws-cdk-lib, node internals...",
+        "(no user code in 10 frames, use --stack-trace-limit to capture more)"
+      ]
+    }
+  ],
+  "/KiraStack/KiraUserPool/KiraDesktopClient/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "KiraUserPoolKiraDesktopClient45AA0837"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...WrappedClass.addClient in aws-cdk-lib...",
+        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:87:37)",
+        "<anonymous> (/home/pauline/kira/ghost-assistant/infra/bin/kira-infra.ts:7:1)",
+        "...node internals, ts-node, ts-node..."
+      ]
+    }
+  ],
+  "/KiraStack/ApiHandler/ServiceRole/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "ApiHandlerServiceRole592E70E9"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new Function2 in aws-cdk-lib...",
+        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:97:24)",
+        "<anonymous> (/home/pauline/kira/ghost-assistant/infra/bin/kira-infra.ts:7:1)",
+        "...node internals, ts-node, ts-node..."
+      ]
+    }
+  ],
+  "/KiraStack/KiraApi/CloudWatchRole/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "KiraApiCloudWatchRole9DEC067B"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new RestApi2 in aws-cdk-lib...",
+        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:129:17)",
+        "<anonymous> (/home/pauline/kira/ghost-assistant/infra/bin/kira-infra.ts:7:1)",
+        "...node internals, ts-node..."
+      ]
+    }
+  ],
+  "/KiraStack/KiraApi/Deployment/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "KiraApiDeploymentBA0FF78A608505b3f104d4845eb1ab00646a6de4"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new RestApi2 in aws-cdk-lib...",
+        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:129:17)",
+        "<anonymous> (/home/pauline/kira/ghost-assistant/infra/bin/kira-infra.ts:7:1)",
+        "...node internals, ts-node..."
+      ]
+    }
+  ],
+  "/KiraStack/KiraApi/DeploymentStage.prod/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "KiraApiDeploymentStageprod19007D51"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new RestApi2 in aws-cdk-lib...",
+        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:129:17)",
+        "<anonymous> (/home/pauline/kira/ghost-assistant/infra/bin/kira-infra.ts:7:1)",
+        "...node internals, ts-node..."
+      ]
+    }
+  ],
+  "/KiraStack/DashboardBucket/Policy/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "DashboardBucketPolicy899268BC"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new Bucket2 in aws-cdk-lib...",
+        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:162:29)",
+        "<anonymous> (/home/pauline/kira/ghost-assistant/infra/bin/kira-infra.ts:7:1)",
+        "...node internals..."
+      ]
+    },
+    {
+      "type": "aws:cdk:analytics:mixin",
+      "data": {
+        "mixin": "aws-cdk-lib.aws_s3.mixins.BucketPolicyStatements"
+      }
+    }
+  ],
+  "/KiraStack/DashboardBucket/AutoDeleteObjectsCustomResource/Default": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "DashboardBucketAutoDeleteObjectsCustomResource0A022D13"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...aws-cdk-lib...",
+        "(no user code in 10 frames, use --stack-trace-limit to capture more)"
+      ]
+    }
+  ],
+  "/KiraStack/SearchHandler/ServiceRole/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "SearchHandlerServiceRoleB55CE200"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new Function2 in aws-cdk-lib...",
+        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:193:27)",
+        "<anonymous> (/home/pauline/kira/ghost-assistant/infra/bin/kira-infra.ts:7:1)",
+        "...node internals, ts-node, ts-node..."
+      ]
+    }
+  ],
+  "/KiraStack/ApiHandler/ServiceRole/DefaultPolicy/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "ApiHandlerServiceRoleDefaultPolicy10321D87"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...aws-cdk-lib...",
+        "(no user code in 10 frames, use --stack-trace-limit to capture more)"
+      ]
+    }
+  ],
+  "/KiraStack/KiraApi/Default/OPTIONS/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "KiraApiOPTIONSE8DA32BF"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new RestApi2 in aws-cdk-lib...",
+        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:129:17)"
+      ]
+    }
+  ],
+  "/KiraStack/KiraApi/Default/calls/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "KiraApicalls5966FF2C"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...RootResource.addResource in aws-cdk-lib...",
+        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:142:28)",
+        "<anonymous> (/home/pauline/kira/ghost-assistant/infra/bin/kira-infra.ts:7:1)",
+        "...node internals, ts-node, ts-node..."
+      ]
+    }
+  ],
+  "/KiraStack/KiraApi/Default/search/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "KiraApisearch103CBCAF"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...RootResource.addResource in aws-cdk-lib...",
+        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:239:29)",
+        "<anonymous> (/home/pauline/kira/ghost-assistant/infra/bin/kira-infra.ts:7:1)",
+        "...node internals, ts-node, ts-node..."
+      ]
+    }
+  ],
+  "/KiraStack/DashboardCDN/Origin1/S3Origin/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "DashboardCDNOrigin1S3Origin3D0D8BCE"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new Distribution2 in aws-cdk-lib...",
+        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:170:26)",
+        "<anonymous> (/home/pauline/kira/ghost-assistant/infra/bin/kira-infra.ts:7:1)"
+      ]
+    }
+  ],
+  "/KiraStack/SearchHandler/ServiceRole/DefaultPolicy/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "SearchHandlerServiceRoleDefaultPolicy154F2B3D"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...aws-cdk-lib...",
+        "(no user code in 10 frames, use --stack-trace-limit to capture more)"
+      ]
+    }
+  ],
+  "/KiraStack/KiraApi/Default/calls/OPTIONS/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "KiraApicallsOPTIONS0DD4FBFE"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...RootResource.addResource in aws-cdk-lib...",
+        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:142:28)",
+        "<anonymous> (/home/pauline/kira/ghost-assistant/infra/bin/kira-infra.ts:7:1)"
+      ]
+    }
+  ],
+  "/KiraStack/KiraApi/Default/calls/GET/ApiPermission.KiraStackKiraApi54A8B8B3.GET..calls": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "KiraApicallsGETApiPermissionKiraStackKiraApi54A8B8B3GETcalls6DE579CB"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...WrappedClass.addMethod in aws-cdk-lib...",
+        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:143:11)",
+        "<anonymous> (/home/pauline/kira/ghost-assistant/infra/bin/kira-infra.ts:7:1)",
+        "...node internals, ts-node..."
+      ]
+    }
+  ],
+  "/KiraStack/KiraApi/Default/calls/GET/ApiPermission.Test.KiraStackKiraApi54A8B8B3.GET..calls": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "KiraApicallsGETApiPermissionTestKiraStackKiraApi54A8B8B3GETcalls05E2EBA4"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...WrappedClass.addMethod in aws-cdk-lib...",
+        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:143:11)",
+        "<anonymous> (/home/pauline/kira/ghost-assistant/infra/bin/kira-infra.ts:7:1)",
+        "...node internals, ts-node..."
+      ]
+    }
+  ],
+  "/KiraStack/KiraApi/Default/calls/GET/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "KiraApicallsGET4A9D7825"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...WrappedClass.addMethod in aws-cdk-lib...",
+        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:143:11)",
+        "<anonymous> (/home/pauline/kira/ghost-assistant/infra/bin/kira-infra.ts:7:1)",
+        "...node internals, ts-node, ts-node..."
+      ]
+    }
+  ],
+  "/KiraStack/KiraApi/Default/calls/POST/ApiPermission.KiraStackKiraApi54A8B8B3.POST..calls": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "KiraApicallsPOSTApiPermissionKiraStackKiraApi54A8B8B3POSTcalls4F193BB0"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...WrappedClass.addMethod in aws-cdk-lib...",
+        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:147:11)",
+        "<anonymous> (/home/pauline/kira/ghost-assistant/infra/bin/kira-infra.ts:7:1)",
+        "...node internals, ts-node..."
+      ]
+    }
+  ],
+  "/KiraStack/KiraApi/Default/calls/POST/ApiPermission.Test.KiraStackKiraApi54A8B8B3.POST..calls": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "KiraApicallsPOSTApiPermissionTestKiraStackKiraApi54A8B8B3POSTcallsA6FFDE40"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...WrappedClass.addMethod in aws-cdk-lib...",
+        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:147:11)",
+        "<anonymous> (/home/pauline/kira/ghost-assistant/infra/bin/kira-infra.ts:7:1)",
+        "...node internals, ts-node..."
+      ]
+    }
+  ],
+  "/KiraStack/KiraApi/Default/calls/POST/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "KiraApicallsPOST8590D371"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...WrappedClass.addMethod in aws-cdk-lib...",
+        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:147:11)",
+        "<anonymous> (/home/pauline/kira/ghost-assistant/infra/bin/kira-infra.ts:7:1)",
+        "...node internals, ts-node, ts-node..."
+      ]
+    }
+  ],
+  "/KiraStack/KiraApi/Default/calls/{callId}/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "KiraApicallscallIdA38629B2"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...WrappedClass.addResource in aws-cdk-lib...",
+        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:152:28)",
+        "<anonymous> (/home/pauline/kira/ghost-assistant/infra/bin/kira-infra.ts:7:1)",
+        "...node internals, ts-node, ts-node..."
+      ]
+    }
+  ],
+  "/KiraStack/KiraApi/Default/search/OPTIONS/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "KiraApisearchOPTIONSF63FD9B4"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...RootResource.addResource in aws-cdk-lib...",
+        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:239:29)",
+        "<anonymous> (/home/pauline/kira/ghost-assistant/infra/bin/kira-infra.ts:7:1)"
+      ]
+    }
+  ],
+  "/KiraStack/KiraApi/Default/search/POST/ApiPermission.KiraStackKiraApi54A8B8B3.POST..search": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "KiraApisearchPOSTApiPermissionKiraStackKiraApi54A8B8B3POSTsearch3DE6E6B1"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...WrappedClass.addMethod in aws-cdk-lib...",
+        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:240:12)",
+        "<anonymous> (/home/pauline/kira/ghost-assistant/infra/bin/kira-infra.ts:7:1)",
+        "...node internals, ts-node..."
+      ]
+    }
+  ],
+  "/KiraStack/KiraApi/Default/search/POST/ApiPermission.Test.KiraStackKiraApi54A8B8B3.POST..search": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "KiraApisearchPOSTApiPermissionTestKiraStackKiraApi54A8B8B3POSTsearchB049FE63"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...WrappedClass.addMethod in aws-cdk-lib...",
+        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:240:12)",
+        "<anonymous> (/home/pauline/kira/ghost-assistant/infra/bin/kira-infra.ts:7:1)",
+        "...node internals, ts-node..."
+      ]
+    }
+  ],
+  "/KiraStack/KiraApi/Default/search/POST/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "KiraApisearchPOST68D88F3D"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...WrappedClass.addMethod in aws-cdk-lib...",
+        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:240:12)",
+        "<anonymous> (/home/pauline/kira/ghost-assistant/infra/bin/kira-infra.ts:7:1)",
+        "...node internals, ts-node, ts-node..."
+      ]
+    }
+  ],
+  "/KiraStack/KiraApi/Default/calls/{callId}/OPTIONS/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "KiraApicallscallIdOPTIONSFA891AE0"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...WrappedClass.addResource in aws-cdk-lib...",
+        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:152:28)",
+        "<anonymous> (/home/pauline/kira/ghost-assistant/infra/bin/kira-infra.ts:7:1)"
+      ]
+    }
+  ],
+  "/KiraStack/KiraApi/Default/calls/{callId}/GET/ApiPermission.KiraStackKiraApi54A8B8B3.GET..calls.{callId}": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "KiraApicallscallIdGETApiPermissionKiraStackKiraApi54A8B8B3GETcallscallId30B3159F"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...WrappedClass.addMethod in aws-cdk-lib...",
+        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:153:14)",
+        "<anonymous> (/home/pauline/kira/ghost-assistant/infra/bin/kira-infra.ts:7:1)",
+        "...node internals, ts-node..."
+      ]
+    }
+  ],
+  "/KiraStack/KiraApi/Default/calls/{callId}/GET/ApiPermission.Test.KiraStackKiraApi54A8B8B3.GET..calls.{callId}": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "KiraApicallscallIdGETApiPermissionTestKiraStackKiraApi54A8B8B3GETcallscallIdCE97E538"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...WrappedClass.addMethod in aws-cdk-lib...",
+        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:153:14)",
+        "<anonymous> (/home/pauline/kira/ghost-assistant/infra/bin/kira-infra.ts:7:1)",
+        "...node internals, ts-node..."
+      ]
+    }
+  ],
+  "/KiraStack/KiraApi/Default/calls/{callId}/GET/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "KiraApicallscallIdGET32290C80"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...WrappedClass.addMethod in aws-cdk-lib...",
+        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:153:14)",
+        "<anonymous> (/home/pauline/kira/ghost-assistant/infra/bin/kira-infra.ts:7:1)",
+        "...node internals, ts-node, ts-node..."
+      ]
+    }
+  ]
+}
