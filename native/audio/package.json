@@ -1,0 +1,15 @@
+{
+  "name": "ghost-audio-native",
+  "version": "0.1.0",
+  "description": "Native audio capture addon for Ghost Assistant",
+  "main": "build/Release/ghost_audio.node",
+  "private": true,
+  "scripts": {
+    "build": "node-gyp rebuild",
+    "clean": "node-gyp clean"
+  },
+  "dependencies": {
+    "node-addon-api": "^7.0.0",
+    "node-gyp": "^10.0.1"
+  }
+}
