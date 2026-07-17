@@ -46,7 +46,7 @@ export class ConfigStore {
         transcriptionMode: 'cloud',
         whisperModelPath: 'ggml-small.en.bin',
         awsRegion: 'us-east-1',
-        bedrockModelId: 'anthropic.claude-sonnet-4-20250514-v1:0',
+        bedrockModelId: 'us.anthropic.claude-sonnet-4-20250514-v1:0',
         callType: 'discovery',
         firstRun: true,
       },

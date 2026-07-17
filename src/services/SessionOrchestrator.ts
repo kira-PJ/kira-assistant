@@ -34,7 +34,7 @@ export class SessionOrchestrator extends EventEmitter {
     this.audio = new AudioCaptureService({
       sampleRate: 16000,
       channels: 1,
-      bufferMs: 5000,
+      bufferMs: 1000,
     });
 
     this.transcription = new TranscriptionService(
