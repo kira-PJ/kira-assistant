@@ -141,21 +141,25 @@ export class AudioCaptureService extends EventEmitter {
   }
 
   private loadNativeModule(): NativeAudioModule | null {
-    try {
-      // In production, the native addon is built and bundled
-      const addonPath = path.join(__dirname, '../../native/audio/build/Release/ghost_audio.node');
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
-      return require(addonPath) as NativeAudioModule;
-    } catch {
-      // Fallback: try loading from dev location
+    const candidates = [
+      // Packaged app (asar unpacked)
+      path.join(process.resourcesPath ?? '', 'app.asar.unpacked/native/audio/build/Release/ghost_audio.node'),
+      // Dev mode (from compiled JS location)
+      path.join(__dirname, '../../native/audio/build/Release/ghost_audio.node'),
+      // Dev mode (from project root)
+      path.resolve(process.cwd(), 'native/audio/build/Release/ghost_audio.node'),
+    ];
+
+    for (const candidate of candidates) {
       try {
-        const devPath = path.resolve(process.cwd(), 'native/audio/build/Release/ghost_audio.node');
-        return require(devPath) as NativeAudioModule;
+        return require(candidate) as NativeAudioModule;
       } catch {
-        console.warn('[AudioCapture] Native module not available. Build with: cd native/audio && npm run build');
-        return null;
+        continue;
       }
     }
+
+    console.error('[AudioCapture] Native module not found in any location:', candidates);
+    return null;
   }
 }
 

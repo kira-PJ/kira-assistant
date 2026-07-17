@@ -60,6 +60,9 @@
       "native/audio/build/Release/*.node",
       "package.json"
     ],
+    "asarUnpack": [
+      "native/audio/build/Release/*.node"
+    ],
     "linux": {
       "target": [
         "AppImage",
