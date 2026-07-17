@@ -53,6 +53,7 @@ export interface TranscriptEntry {
   timestamp: number;
   confidence: number;
   isBookmarked?: boolean;
+  isPartial?: boolean;
 }
 
 export interface AISuggestion {

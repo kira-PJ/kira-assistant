@@ -36,7 +36,22 @@ export function useSession() {
     // Subscribe to live events
     cleanupRefs.current.push(
       api.onTranscriptSegment((segment) => {
-        setTranscript((prev) => [...prev, segment]);
+        setTranscript((prev) => {
+          if (segment.isPartial) {
+            // Replace the last partial from the same speaker, or append
+            const lastIdx = prev.length - 1;
+            if (lastIdx >= 0 && prev[lastIdx].isPartial && prev[lastIdx].speaker === segment.speaker) {
+              const updated = [...prev];
+              updated[lastIdx] = segment;
+              return updated;
+            }
+          }
+          // Final result: remove any trailing partial from same speaker, then append
+          const filtered = prev.filter(
+            (s, i) => !(i === prev.length - 1 && s.isPartial && s.speaker === segment.speaker)
+          );
+          return [...filtered, segment];
+        });
       })
     );
 

@@ -56,8 +56,12 @@ const TranscriptPanel: React.FC<TranscriptPanelProps> = ({ entries, onBookmark }
             </button>
           </div>
           <p
-            className="text-sm text-ghost-text leading-relaxed"
-            style={{ opacity: Math.max(0.6, entry.confidence) }}
+            className={`text-sm leading-relaxed ${
+              entry.isPartial
+                ? 'text-ghost-text-dim italic'
+                : 'text-ghost-text'
+            }`}
+            style={{ opacity: entry.isPartial ? 0.6 : Math.max(0.7, entry.confidence) }}
           >
             {entry.text}
           </p>

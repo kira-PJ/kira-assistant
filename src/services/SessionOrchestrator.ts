@@ -34,7 +34,7 @@ export class SessionOrchestrator extends EventEmitter {
     this.audio = new AudioCaptureService({
       sampleRate: 16000,
       channels: 1,
-      bufferMs: 1000,
+      bufferMs: 200,
     });
 
     this.transcription = new TranscriptionService(
@@ -115,7 +115,7 @@ export class SessionOrchestrator extends EventEmitter {
     let chunkCount = 0;
     this.audio.on('audio-chunk', (chunk: AudioChunk) => {
       chunkCount++;
-      if (chunkCount <= 5 || chunkCount % 10 === 0) {
+      if (chunkCount <= 3 || chunkCount % 50 === 0) {
         console.log(`[Orchestrator] Audio chunk #${chunkCount}: source=${chunk.source}, active=${chunk.isActive}, len=${chunk.buffer.length}`);
       }
       this.transcription.processChunk(chunk);
