@@ -34,7 +34,7 @@ private:
 
   int m_sample_rate = 16000;
   int m_channels = 1;
-  float m_threshold = 500.0f;
+  float m_threshold = 50.0f;
   float m_zcr_threshold = 0.1f;
   bool m_speaking = false;
   int m_speech_frames = 0;

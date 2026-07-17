@@ -45,7 +45,7 @@ function createOrchestrator(): SessionOrchestrator {
     callType: (config.get('callType') as any) ?? 'discovery',
     awsRegion: (config.get('awsRegion') as string) ?? 'us-east-1',
     bedrockModelId: (config.get('bedrockModelId') as string) ?? undefined,
-    whisperModelPath: (config.get('whisperModelPath') as string) ?? 'ggml-tiny.en.bin',
+    whisperModelPath: (config.get('whisperModelPath') as string) ?? 'ggml-small.en.bin',
   });
 
   // Forward events to renderer via IPC

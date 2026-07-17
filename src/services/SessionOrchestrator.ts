@@ -34,7 +34,7 @@ export class SessionOrchestrator extends EventEmitter {
     this.audio = new AudioCaptureService({
       sampleRate: 16000,
       channels: 1,
-      bufferMs: 5000,
+      bufferMs: 3000,
     });
 
     this.transcription = new TranscriptionService(
@@ -56,7 +56,9 @@ export class SessionOrchestrator extends EventEmitter {
     this.setState('initializing');
 
     // Initialize transcription engine
+    console.log('[Orchestrator] Initializing transcription...');
     const txReady = await this.transcription.initialize();
+    console.log('[Orchestrator] Transcription ready:', txReady);
     if (!txReady) {
       this.setState('error');
       this.emit('error', new Error('Failed to initialize transcription'));
@@ -64,7 +66,9 @@ export class SessionOrchestrator extends EventEmitter {
     }
 
     // Start audio capture
+    console.log('[Orchestrator] Starting audio capture...');
     const audioStarted = await this.audio.start();
+    console.log('[Orchestrator] Audio started:', audioStarted);
     if (!audioStarted) {
       this.setState('error');
       this.emit('error', new Error('Failed to start audio capture'));
@@ -108,7 +112,12 @@ export class SessionOrchestrator extends EventEmitter {
 
   private wireEvents(): void {
     // Audio → Transcription
+    let chunkCount = 0;
     this.audio.on('audio-chunk', (chunk: AudioChunk) => {
+      chunkCount++;
+      if (chunkCount <= 5 || chunkCount % 10 === 0) {
+        console.log(`[Orchestrator] Audio chunk #${chunkCount}: source=${chunk.source}, active=${chunk.isActive}, len=${chunk.buffer.length}`);
+      }
       this.transcription.processChunk(chunk);
     });
 

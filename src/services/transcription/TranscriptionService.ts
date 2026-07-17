@@ -61,7 +61,7 @@ export class TranscriptionService extends EventEmitter {
    * Queues chunks and processes them sequentially to avoid overloading
    */
   async processChunk(chunk: AudioChunk): Promise<void> {
-    // Only process chunks with voice activity
+    // Only process chunks with voice activity detected
     if (!chunk.isActive) return;
 
     this.queue.push(chunk);

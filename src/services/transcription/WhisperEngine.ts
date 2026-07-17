@@ -104,6 +104,9 @@ export class WhisperEngine extends EventEmitter implements TranscriptionEngine {
         '-t', String(this.options.threads),
         '--no-timestamps',
         '--print-progress', 'false',
+        '--no-fallback',
+        '--beam-size', '5',
+        '--entropy-thold', '2.8',
         '-otxt',
       ];
 
@@ -129,9 +132,29 @@ export class WhisperEngine extends EventEmitter implements TranscriptionEngine {
     const lines = output.split('\n').filter(l => l.trim().length > 0);
     const segments: TranscriptSegment[] = [];
 
+    // Known whisper hallucination patterns to filter
+    const hallucinations = [
+      /^\[.*\]$/,                          // [BLANK_AUDIO], [music], etc.
+      /^\(.*\)$/,                          // (sighs), (mumbling), etc.
+      /^♪/,                                // Music notes
+      /thank you for watching/i,
+      /please subscribe/i,
+      /thanks for watching/i,
+      /you$/,                              // Single word "you" (common hallucination)
+      /^\.+$/,                             // Just dots
+      /^\s*$/,                             // Empty
+    ];
+
     for (const line of lines) {
       const text = line.trim();
-      if (!text || text === '[BLANK_AUDIO]') continue;
+      if (!text) continue;
+
+      // Filter hallucinations
+      const isHallucination = hallucinations.some(pattern => pattern.test(text));
+      if (isHallucination) continue;
+
+      // Skip very short outputs (likely noise)
+      if (text.length < 4) continue;
 
       this.segmentCounter++;
       segments.push({
@@ -141,7 +164,7 @@ export class WhisperEngine extends EventEmitter implements TranscriptionEngine {
         text,
         timestamp: Date.now(),
         endTimestamp: Date.now(),
-        confidence: 0.85, // whisper.cpp doesn't expose per-segment confidence easily
+        confidence: 0.85,
         isPartial: false,
       });
     }

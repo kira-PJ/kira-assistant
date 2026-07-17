@@ -37,10 +37,13 @@ export class AudioCaptureService extends EventEmitter {
     try {
       this.native = this.loadNativeModule();
       if (!this.native) {
+        console.error('[AudioCapture] Native module not loaded');
         this.setState('error');
         this.emit('error', new Error('Failed to load native audio module'));
         return false;
       }
+
+      console.log('[AudioCapture] Native module loaded, starting capture...');
 
       const result = this.native.startCapture(
         {
@@ -58,6 +61,8 @@ export class AudioCaptureService extends EventEmitter {
         }
       );
 
+      console.log('[AudioCapture] startCapture result:', result);
+
       if (result?.micActive || result?.systemActive) {
         this.setState('capturing');
         return true;
@@ -67,6 +72,7 @@ export class AudioCaptureService extends EventEmitter {
         return false;
       }
     } catch (err) {
+      console.error('[AudioCapture] Error:', err);
       this.setState('error');
       this.emit('error', err instanceof Error ? err : new Error(String(err)));
       return false;
