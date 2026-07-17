@@ -43,7 +43,7 @@ export class ConfigStore {
         hotkeyQuickAsk: 'CommandOrControl+Shift+A',
         hotkeyCaptureToggle: 'CommandOrControl+Shift+R',
         hotkeyBookmark: 'CommandOrControl+Shift+B',
-        transcriptionMode: 'local',
+        transcriptionMode: 'cloud',
         whisperModelPath: 'ggml-small.en.bin',
         awsRegion: 'us-east-1',
         bedrockModelId: 'anthropic.claude-3-5-sonnet-20241022-v2:0',

@@ -23,10 +23,12 @@ export class TranscriptionService extends EventEmitter {
   private queue: AudioChunk[] = [];
   private transcript: TranscriptSegment[] = [];
   private maxQueueSize = 10; // prevent unbounded growth
+  private isCloudMode: boolean;
 
   constructor(mode: 'local' | 'cloud' = 'local', options: TranscriptionOptions = {}) {
     super();
     this.options = options;
+    this.isCloudMode = mode === 'cloud';
 
     if (mode === 'cloud') {
       this.engine = new AWSTranscribeEngine(options.awsRegion);
@@ -61,8 +63,11 @@ export class TranscriptionService extends EventEmitter {
    * Queues chunks and processes them sequentially to avoid overloading
    */
   async processChunk(chunk: AudioChunk): Promise<void> {
-    // Only process chunks with voice activity detected
-    if (!chunk.isActive) return;
+    // Cloud mode: send all chunks (Transcribe handles silence gracefully)
+    // Local mode: skip silent chunks (Whisper hallucinates on silence)
+    if (!chunk.isActive && !this.isCloudMode) {
+      return;
+    }
 
     this.queue.push(chunk);
 

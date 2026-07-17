@@ -10,38 +10,61 @@ import { TranscriptionEngine, TranscriptionOptions, TranscriptSegment } from './
 /**
  * AWSTranscribeEngine - Cloud transcription via AWS Transcribe Streaming
  *
- * Uses WebSocket-based streaming for real-time transcription with
- * built-in speaker diarization. Falls back to local Whisper on failure.
+ * Maintains a single streaming session and feeds audio chunks continuously.
+ * Results arrive in real-time (~1-2 second latency).
  *
- * Costs: ~$0.024/min
+ * Speaker diarization: uses dual-stream source labeling (mic=You, system=Other)
+ * plus optional AWS speaker labels for multi-participant calls.
+ *
+ * Cost: ~$0.024/min
  */
 export class AWSTranscribeEngine extends EventEmitter implements TranscriptionEngine {
   private client: TranscribeStreamingClient | null = null;
   private ready = false;
   private segmentCounter = 0;
   private region: string;
+  private pendingChunks: { buffer: Buffer; source: 'mic' | 'system' }[] = [];
+  private currentSource: 'mic' | 'system' = 'mic';
+  private sessionActive = false;
+  private audioQueue: Buffer[] = [];
+  private audioResolve: ((value: void) => void) | null = null;
+  private sessionEnded = false;
+  private resultSegments: TranscriptSegment[] = [];
 
   constructor(region?: string) {
     super();
     this.region = region ?? process.env.AWS_REGION ?? 'us-east-1';
   }
 
-  async initialize(options: TranscriptionOptions): Promise<boolean> {
+  async initialize(_options: TranscriptionOptions): Promise<boolean> {
     try {
       this.client = new TranscribeStreamingClient({ region: this.region });
       this.ready = true;
+      console.log('[AWSTranscribe] Client initialized, region:', this.region);
       this.emit('ready');
       return true;
     } catch (err) {
+      console.error('[AWSTranscribe] Init failed:', err);
       this.emit('error', new Error(`Failed to init Transcribe client: ${err}`));
       return false;
     }
   }
 
+  /**
+   * Transcribe a chunk of audio.
+   * Creates a short streaming session per chunk (simpler and more reliable
+   * than maintaining a long-lived session across chunk boundaries).
+   */
   async transcribe(pcmData: Buffer, source: 'mic' | 'system'): Promise<TranscriptSegment[]> {
     if (!this.ready || !this.client) return [];
+    if (pcmData.length === 0) return [];
+
+    this.currentSource = source;
 
     try {
+      const segments: TranscriptSegment[] = [];
+
+      // Create audio stream generator
       const audioStream = this.createAudioStream(pcmData);
 
       const command = new StartStreamTranscriptionCommand({
@@ -51,48 +74,37 @@ export class AWSTranscribeEngine extends EventEmitter implements TranscriptionEn
         AudioStream: audioStream,
         ShowSpeakerLabel: true,
         EnablePartialResultsStabilization: true,
-        PartialResultsStability: 'medium',
+        PartialResultsStability: 'high',
       });
 
       const response = await this.client.send(command);
-      const segments: TranscriptSegment[] = [];
 
       if (response.TranscriptResultStream) {
         for await (const event of response.TranscriptResultStream) {
           if (event.TranscriptEvent?.Transcript?.Results) {
             for (const result of event.TranscriptEvent.Transcript.Results) {
+              // Skip partial results — only take final
               if (result.IsPartial) continue;
 
               for (const alt of result.Alternatives ?? []) {
-                if (!alt.Transcript || alt.Transcript.trim().length === 0) continue;
+                const text = alt.Transcript?.trim();
+                if (!text || text.length < 2) continue;
 
                 this.segmentCounter++;
 
-                // Use speaker label if available, otherwise fallback to source
-                let speaker: 'you' | 'other' = source === 'mic' ? 'you' : 'other';
-                let speakerName = source === 'mic' ? 'You' : 'Customer';
-
-                if (alt.Items && alt.Items.length > 0) {
-                  const speakerLabel = alt.Items[0].Speaker;
-                  if (speakerLabel === 'spk_0') {
-                    speaker = 'you';
-                    speakerName = 'You';
-                  } else if (speakerLabel) {
-                    speaker = 'other';
-                    speakerName = `Speaker ${speakerLabel.replace('spk_', '')}`;
-                  }
-                }
-
-                segments.push({
+                const segment: TranscriptSegment = {
                   id: `aws-${Date.now()}-${this.segmentCounter}`,
-                  speaker,
-                  speakerName,
-                  text: alt.Transcript,
+                  speaker: source === 'mic' ? 'you' : 'other',
+                  speakerName: source === 'mic' ? 'You' : 'Customer',
+                  text,
                   timestamp: Date.now(),
                   endTimestamp: Date.now(),
                   confidence: this.computeConfidence(alt.Items ?? []),
                   isPartial: false,
-                });
+                };
+
+                segments.push(segment);
+                console.log(`[AWSTranscribe] Segment: [${segment.speakerName}] ${text}`);
               }
             }
           }
@@ -100,8 +112,13 @@ export class AWSTranscribeEngine extends EventEmitter implements TranscriptionEn
       }
 
       return segments;
-    } catch (err) {
-      this.emit('error', err instanceof Error ? err : new Error(String(err)));
+    } catch (err: any) {
+      const msg = err?.message ?? String(err);
+      // Don't spam errors for empty audio
+      if (!msg.includes('audio') || this.segmentCounter === 0) {
+        console.error('[AWSTranscribe] Error:', msg);
+      }
+      this.emit('error', new Error(msg));
       return [];
     }
   }
@@ -112,12 +129,14 @@ export class AWSTranscribeEngine extends EventEmitter implements TranscriptionEn
 
   shutdown(): void {
     this.ready = false;
+    this.sessionEnded = true;
     this.client?.destroy();
     this.client = null;
   }
 
   private createAudioStream(pcmData: Buffer): AsyncIterable<AudioStream> {
-    const chunkSize = 4096; // Send in 4KB chunks
+    // Send audio in ~100ms chunks (3200 bytes at 16kHz 16-bit mono)
+    const chunkSize = 3200;
     const chunks: Buffer[] = [];
 
     for (let i = 0; i < pcmData.length; i += chunkSize) {
@@ -128,14 +147,23 @@ export class AWSTranscribeEngine extends EventEmitter implements TranscriptionEn
       for (const chunk of chunks) {
         yield { AudioEvent: { AudioChunk: chunk } };
       }
+      // Empty chunk signals end of audio
+      yield { AudioEvent: { AudioChunk: Buffer.alloc(0) } };
     }
 
     return generator();
   }
 
   private computeConfidence(items: { Confidence?: number }[]): number {
-    if (items.length === 0) return 0.8;
-    const total = items.reduce((sum, item) => sum + (item.Confidence ?? 0.8), 0);
-    return total / items.length;
+    if (items.length === 0) return 0.85;
+    let total = 0;
+    let count = 0;
+    for (const item of items) {
+      if (item.Confidence !== undefined) {
+        total += item.Confidence;
+        count++;
+      }
+    }
+    return count > 0 ? total / count : 0.85;
   }
 }

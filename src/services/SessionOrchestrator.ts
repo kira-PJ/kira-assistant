@@ -38,8 +38,8 @@ export class SessionOrchestrator extends EventEmitter {
     });
 
     this.transcription = new TranscriptionService(
-      config.transcriptionMode ?? 'local',
-      { modelPath: config.whisperModelPath }
+      config.transcriptionMode ?? 'cloud',
+      { modelPath: config.whisperModelPath, awsRegion: config.awsRegion }
     );
 
     this.coaching = new CoachingService({
