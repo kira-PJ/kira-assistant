@@ -37,20 +37,59 @@ export function useSession() {
     cleanupRefs.current.push(
       api.onTranscriptSegment((segment) => {
         setTranscript((prev) => {
+          const lastIdx = prev.length - 1;
+          const last = lastIdx >= 0 ? prev[lastIdx] : null;
+
+          // If partial: replace the current partial block for this speaker
           if (segment.isPartial) {
-            // Replace the last partial from the same speaker, or append
-            const lastIdx = prev.length - 1;
-            if (lastIdx >= 0 && prev[lastIdx].isPartial && prev[lastIdx].speaker === segment.speaker) {
+            if (last && last.isPartial && last.speaker === segment.speaker) {
               const updated = [...prev];
               updated[lastIdx] = segment;
               return updated;
             }
+            // New partial after a final — append as new entry
+            return [...prev, segment];
           }
-          // Final result: remove any trailing partial from same speaker, then append
-          const filtered = prev.filter(
-            (s, i) => !(i === prev.length - 1 && s.isPartial && s.speaker === segment.speaker)
-          );
-          return [...filtered, segment];
+
+          // Final result: merge into the last block if same speaker and within 8 seconds
+          const timeSinceLast = last ? segment.timestamp - last.timestamp : Infinity;
+          const sameSpeaker = last && last.speaker === segment.speaker;
+          const withinGap = timeSinceLast < 8000;
+
+          if (last && last.isPartial && last.speaker === segment.speaker) {
+            // Replace partial with final
+            const updated = [...prev];
+            if (sameSpeaker && lastIdx > 0 && !prev[lastIdx - 1].isPartial && prev[lastIdx - 1].speaker === segment.speaker) {
+              // Merge into the block before the partial
+              updated.splice(lastIdx, 1); // remove partial
+              updated[updated.length - 1] = {
+                ...updated[updated.length - 1],
+                text: updated[updated.length - 1].text + ' ' + segment.text,
+                timestamp: segment.timestamp,
+                confidence: segment.confidence,
+                isPartial: false,
+              };
+            } else {
+              updated[lastIdx] = segment;
+            }
+            return updated;
+          }
+
+          if (sameSpeaker && withinGap && last && !last.isPartial) {
+            // Same speaker, still talking — append to the existing block
+            const updated = [...prev];
+            updated[lastIdx] = {
+              ...last,
+              text: last.text + ' ' + segment.text,
+              timestamp: segment.timestamp,
+              confidence: Math.min(last.confidence, segment.confidence),
+              isPartial: false,
+            };
+            return updated;
+          }
+
+          // New speaker or long pause — start a new block
+          return [...prev, segment];
         });
       })
     );
