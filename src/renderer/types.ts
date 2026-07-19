@@ -18,6 +18,8 @@ export interface GhostAPI {
   getTranscript: () => Promise<TranscriptEntry[]>;
   getSuggestions: () => Promise<AISuggestion[]>;
   getTalkRatio: () => Promise<TalkRatio>;
+  listAudioDevices: () => Promise<{ name: string; description: string; isMonitor: boolean }[]>;
+  startSession: (config: any) => Promise<{ success: boolean; error?: string }>;
 
   // First-run
   isFirstRun: () => Promise<boolean>;

@@ -168,6 +168,60 @@ app.whenReady().then(async () => {
   });
 
   // === Session IPC ===
+  ipcMain.handle('list-audio-devices', () => {
+    try {
+      const addon = require(
+        path.resolve(process.resourcesPath ?? process.cwd(), 
+          process.resourcesPath ? 'app.asar.unpacked/native/audio/build/Release/ghost_audio.node' : 'native/audio/build/Release/ghost_audio.node')
+      );
+      return addon.listSources();
+    } catch {
+      return [];
+    }
+  });
+
+  ipcMain.handle('start-session', async (_event, sessionConfig: any) => {
+    if (!orchestrator) return { success: false, error: 'Orchestrator not ready' };
+
+    // Store meeting context for AI coaching
+    if (sessionConfig.meetingContext) {
+      config.set('currentMeetingContext', sessionConfig.meetingContext);
+    }
+    if (sessionConfig.meetingName) {
+      config.set('currentMeetingName', sessionConfig.meetingName);
+    }
+    if (sessionConfig.callType) {
+      orchestrator.setCallType(sessionConfig.callType);
+      config.set('callType', sessionConfig.callType);
+    }
+    if (sessionConfig.myRole) {
+      config.set('currentMyRole', sessionConfig.myRole);
+    }
+    if (sessionConfig.participants) {
+      config.set('currentParticipants', sessionConfig.participants);
+    }
+
+    // Pass context to coaching engine
+    const coaching = (orchestrator as any).coaching;
+    if (coaching?.setMeetingContext) {
+      coaching.setMeetingContext({
+        name: sessionConfig.meetingName,
+        context: sessionConfig.meetingContext,
+        myRole: sessionConfig.myRole,
+        participants: sessionConfig.participants,
+      });
+    }
+
+    try {
+      const success = await orchestrator.start();
+      log.info('Session started', { success, name: sessionConfig.meetingName });
+      return { success };
+    } catch (err: any) {
+      log.error('Session start failed', { error: err.message });
+      return { success: false, error: err.message };
+    }
+  });
+
   ipcMain.handle('start-capture', async () => {
     if (!orchestrator) return { success: false, error: 'Orchestrator not ready' };
     try {

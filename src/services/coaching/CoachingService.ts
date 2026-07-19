@@ -38,6 +38,7 @@ export class CoachingService extends EventEmitter {
   private silenceThresholdMs = 8000; // 8s of silence triggers suggestion
   private lastSummaryTime = 0;
   private summaryInterval = 300000; // 5 minutes between summaries
+  private meetingContext: { name?: string; context?: string; myRole?: string; participants?: string } = {};
 
   constructor(options: { region?: string; modelId?: string; callType?: CallType } = {}) {
     super();
@@ -49,6 +50,14 @@ export class CoachingService extends EventEmitter {
 
   setCallType(type: CallType): void {
     this.callType = type;
+  }
+
+  /**
+   * Set meeting context — provides the AI with background info
+   * to generate more relevant suggestions and reduce hallucinations
+   */
+  setMeetingContext(ctx: { name?: string; context?: string; myRole?: string; participants?: string }): void {
+    this.meetingContext = ctx;
   }
 
   /**
@@ -135,9 +144,14 @@ Respond with JSON:
    */
   private getContext(): CoachingContext {
     const recentSegments = this.segments.slice(-20);
-    const recentTranscript = recentSegments
+    let recentTranscript = recentSegments
       .map(s => `[${s.speakerName}]: ${s.text}`)
       .join('\n');
+
+    // Prepend meeting context for better AI accuracy
+    if (this.meetingContext.context) {
+      recentTranscript = `[MEETING CONTEXT: ${this.meetingContext.context}]\n[MY ROLE: ${this.meetingContext.myRole ?? 'leading'}]\n[PARTICIPANTS: ${this.meetingContext.participants ?? 'unknown'}]\n\n${recentTranscript}`;
+    }
 
     return {
       callType: this.callType,

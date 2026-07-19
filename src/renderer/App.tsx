@@ -8,6 +8,7 @@ import MetricsPanel from './components/panels/MetricsPanel';
 import ActionsPanel from './components/panels/ActionsPanel';
 import CollapsedStrip from './components/CollapsedStrip';
 import SetupWizard from './components/SetupWizard';
+import PreCallPanel, { PreCallConfig } from './components/PreCallPanel';
 import { useSession } from './hooks/useSession';
 import { GhostAPI } from './types';
 
@@ -23,6 +24,7 @@ const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabId>('transcript');
   const [collapsed, setCollapsed] = useState(false);
   const [showSetup, setShowSetup] = useState(false);
+  const [showPreCall, setShowPreCall] = useState(false);
 
   const session = useSession();
 
@@ -43,8 +45,15 @@ const App: React.FC = () => {
     if (session.isCapturing) {
       session.stopCapture();
     } else {
-      session.startCapture();
+      // Show pre-call panel instead of starting immediately
+      setShowPreCall(true);
     }
+  }, [session]);
+
+  const handlePreCallStart = useCallback(async (config: PreCallConfig) => {
+    setShowPreCall(false);
+    session.changeCallType(config.callType);
+    await window.ghostAPI?.startSession(config);
   }, [session]);
 
   useEffect(() => {
@@ -67,6 +76,25 @@ const App: React.FC = () => {
 
   if (collapsed) {
     return <CollapsedStrip isCapturing={session.isCapturing} onExpand={toggleCollapse} />;
+  }
+
+  if (showPreCall && !session.isCapturing) {
+    return (
+      <div className="flex flex-col h-screen bg-ghost-bg rounded-lg overflow-hidden border border-ghost-border">
+        <TitleBar
+          isCapturing={session.isCapturing}
+          sessionState={session.sessionState}
+          callType={session.callType}
+          onToggleCapture={handleToggleCapture}
+          onCollapse={toggleCollapse}
+          onCallTypeChange={session.changeCallType}
+        />
+        <PreCallPanel
+          onStart={handlePreCallStart}
+          onCancel={() => setShowPreCall(false)}
+        />
+      </div>
+    );
   }
 
   const renderPanel = () => {

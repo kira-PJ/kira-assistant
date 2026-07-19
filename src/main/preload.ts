@@ -23,6 +23,8 @@ contextBridge.exposeInMainWorld('ghostAPI', {
   getTranscript: () => ipcRenderer.invoke('get-transcript'),
   getSuggestions: () => ipcRenderer.invoke('get-suggestions'),
   getTalkRatio: () => ipcRenderer.invoke('get-talk-ratio'),
+  listAudioDevices: () => ipcRenderer.invoke('list-audio-devices'),
+  startSession: (config: any) => ipcRenderer.invoke('start-session', config),
 
   // === First-run ===
   isFirstRun: () => ipcRenderer.invoke('is-first-run'),
