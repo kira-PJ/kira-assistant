@@ -212,6 +212,9 @@ app.whenReady().then(async () => {
       });
     }
 
+    // Pass session config to orchestrator (for auto-save + speaker ID)
+    orchestrator.setSessionConfig(sessionConfig);
+
     try {
       const success = await orchestrator.start();
       log.info('Session started', { success, name: sessionConfig.meetingName });
@@ -299,6 +302,15 @@ app.whenReady().then(async () => {
 
   ipcMain.handle('export-suggestions', () => {
     return JSON.stringify(orchestrator?.getSuggestions() ?? [], null, 2);
+  });
+
+  // === Saved calls ===
+  ipcMain.handle('list-saved-calls', async () => {
+    return orchestrator?.listSavedCalls() ?? [];
+  });
+
+  ipcMain.handle('get-saved-call', async (_event, id: string) => {
+    return orchestrator?.getSavedCall(id) ?? null;
   });
 });
 

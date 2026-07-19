@@ -8,27 +8,18 @@ import {
 import { TranscriptionEngine, TranscriptionOptions, TranscriptSegment } from './types';
 
 /**
- * AWSTranscribeEngine - Real-time streaming transcription
+ * AWSTranscribeEngine - Real-time persistent streaming transcription
  *
- * Maintains a SINGLE persistent streaming session per audio source.
- * Audio chunks are fed continuously into the stream, and results
- * arrive in real-time (~1-2 second latency), just like Otter.ai.
- *
- * Architecture:
- * - Audio chunks push into a queue
- * - An async generator feeds the queue to Transcribe continuously
- * - A response listener emits segments as they arrive
- * - Partial results shown immediately, replaced when final arrives
+ * ONE session stays open per audio source. Audio pushed continuously.
+ * Partial results appear immediately (grey), finals replace them (white).
  */
 export class AWSTranscribeEngine extends EventEmitter implements TranscriptionEngine {
   private client: TranscribeStreamingClient | null = null;
   private ready = false;
   private segmentCounter = 0;
   private region: string;
-
-  // Persistent stream state
-  private micStream: StreamSession | null = null;
-  private sysStream: StreamSession | null = null;
+  private micSession: PersistentStream | null = null;
+  private sysSession: PersistentStream | null = null;
 
   constructor(region?: string) {
     super();
@@ -44,111 +35,111 @@ export class AWSTranscribeEngine extends EventEmitter implements TranscriptionEn
       return true;
     } catch (err) {
       console.error('[AWSTranscribe] Init failed:', err);
-      this.emit('error', new Error(`Failed to init Transcribe client: ${err}`));
       return false;
     }
   }
 
-  /**
-   * Feed audio into the persistent stream.
-   * First call starts the session; subsequent calls push more audio.
-   */
   async transcribe(pcmData: Buffer, source: 'mic' | 'system'): Promise<TranscriptSegment[]> {
     if (!this.ready || !this.client) return [];
     if (pcmData.length === 0) return [];
 
-    const stream = source === 'mic' ? this.micStream : this.sysStream;
+    let session = source === 'mic' ? this.micSession : this.sysSession;
 
-    if (!stream || stream.ended) {
-      // Start a new streaming session for this source
-      await this.startStream(source);
+    // Start session if not running
+    if (!session || session.ended) {
+      session = new PersistentStream(this.client, source, this.region, () => ++this.segmentCounter);
+      if (source === 'mic') this.micSession = session;
+      else this.sysSession = session;
+      session.start();
     }
 
-    // Push audio into the active stream
-    const activeStream = source === 'mic' ? this.micStream : this.sysStream;
-    activeStream?.pushAudio(pcmData);
+    // Push audio (non-blocking)
+    session.push(pcmData);
 
-    // Collect any segments that arrived since last call
-    const segments = activeStream?.drainSegments() ?? [];
-    return segments;
+    // Return any accumulated results
+    return session.drain();
   }
 
-  isReady(): boolean {
-    return this.ready;
-  }
+  isReady(): boolean { return this.ready; }
 
   shutdown(): void {
     this.ready = false;
-    this.micStream?.stop();
-    this.sysStream?.stop();
-    this.micStream = null;
-    this.sysStream = null;
+    this.micSession?.stop();
+    this.sysSession?.stop();
     this.client?.destroy();
     this.client = null;
-  }
-
-  private async startStream(source: 'mic' | 'system'): Promise<void> {
-    if (!this.client) return;
-
-    const session = new StreamSession(this.client, source, () => this.segmentCounter++);
-
-    if (source === 'mic') {
-      this.micStream = session;
-    } else {
-      this.sysStream = session;
-    }
-
-    session.on('error', (err) => {
-      console.error(`[AWSTranscribe] Stream error (${source}):`, err.message);
-      this.emit('error', err);
-    });
-
-    await session.start();
   }
 }
 
 /**
- * StreamSession - A single persistent Transcribe streaming session
- *
- * Keeps a WebSocket open and feeds audio continuously.
- * Collects results as they arrive.
+ * PersistentStream - single long-lived Transcribe WebSocket session
  */
-class StreamSession extends EventEmitter {
+class PersistentStream {
   private client: TranscribeStreamingClient;
   private source: 'mic' | 'system';
-  private audioQueue: Buffer[] = [];
-  private audioResolve: (() => void) | null = null;
-  private segments: TranscriptSegment[] = [];
+  private region: string;
   private getNextId: () => number;
-  ended = false;
+  private segments: TranscriptSegment[] = [];
+  private audioChunks: Buffer[] = [];
+  private wakeUp: (() => void) | null = null;
   private stopping = false;
+  ended = false;
 
-  constructor(client: TranscribeStreamingClient, source: 'mic' | 'system', getNextId: () => number) {
-    super();
+  constructor(client: TranscribeStreamingClient, source: 'mic' | 'system', region: string, getNextId: () => number) {
     this.client = client;
     this.source = source;
+    this.region = region;
     this.getNextId = getNextId;
   }
 
-  async start(): Promise<void> {
+  start(): void {
+    this.run().catch((err) => {
+      console.error(`[AWSTranscribe] Stream ${this.source} error:`, err?.message?.slice(0, 100));
+      this.ended = true;
+    });
+  }
+
+  push(audio: Buffer): void {
+    this.audioChunks.push(audio);
+    // Wake up the generator if it's waiting
+    if (this.wakeUp) {
+      const wake = this.wakeUp;
+      this.wakeUp = null;
+      wake();
+    }
+  }
+
+  drain(): TranscriptSegment[] {
+    const result = this.segments.splice(0);
+    return result;
+  }
+
+  stop(): void {
+    this.stopping = true;
+    if (this.wakeUp) {
+      const wake = this.wakeUp;
+      this.wakeUp = null;
+      wake();
+    }
+  }
+
+  private async run(): Promise<void> {
     const self = this;
 
-    // Async generator that yields audio chunks as they arrive
-    async function* audioStream(): AsyncGenerator<AudioStream> {
+    async function* audioGenerator(): AsyncGenerator<AudioStream> {
       while (!self.stopping) {
-        if (self.audioQueue.length > 0) {
-          const chunk = self.audioQueue.shift()!;
+        // Yield all queued chunks
+        while (self.audioChunks.length > 0) {
+          const chunk = self.audioChunks.shift()!;
           yield { AudioEvent: { AudioChunk: chunk } };
-        } else {
-          // Wait for more audio
-          await new Promise<void>((resolve) => {
-            self.audioResolve = resolve;
-            // Timeout to prevent hanging forever
-            setTimeout(resolve, 100);
-          });
         }
+        // Wait for more audio (with timeout to prevent hanging)
+        await new Promise<void>((resolve) => {
+          self.wakeUp = resolve;
+          setTimeout(resolve, 50); // poll every 50ms
+        });
       }
-      // Signal end of stream
+      // End signal
       yield { AudioEvent: { AudioChunk: Buffer.alloc(0) } };
     }
 
@@ -156,95 +147,40 @@ class StreamSession extends EventEmitter {
       LanguageCode: LanguageCode.EN_US,
       MediaEncoding: 'pcm',
       MediaSampleRateHertz: 16000,
-      AudioStream: audioStream(),
-      ShowSpeakerLabel: true,
+      AudioStream: audioGenerator(),
       EnablePartialResultsStabilization: true,
       PartialResultsStability: 'high',
     });
 
-    // Start the stream in background (don't await — it runs until stopped)
-    this.processResponse(command).catch((err) => {
-      if (!this.stopping) {
-        this.emit('error', err);
-      }
-      this.ended = true;
-    });
-  }
+    const response = await this.client.send(command);
+    console.log(`[AWSTranscribe] Persistent stream started for: ${this.source}`);
 
-  private async processResponse(command: StartStreamTranscriptionCommand): Promise<void> {
-    try {
-      const response = await this.client.send(command);
+    if (response.TranscriptResultStream) {
+      for await (const event of response.TranscriptResultStream) {
+        if (this.stopping) break;
 
-      if (response.TranscriptResultStream) {
-        for await (const event of response.TranscriptResultStream) {
-          if (this.stopping) break;
+        if (event.TranscriptEvent?.Transcript?.Results) {
+          for (const result of event.TranscriptEvent.Transcript.Results) {
+            for (const alt of result.Alternatives ?? []) {
+              const text = alt.Transcript?.trim();
+              if (!text || text.length < 2) continue;
 
-          if (event.TranscriptEvent?.Transcript?.Results) {
-            for (const result of event.TranscriptEvent.Transcript.Results) {
-              // Show partial results for real-time feel
-              for (const alt of result.Alternatives ?? []) {
-                const text = alt.Transcript?.trim();
-                if (!text || text.length < 2) continue;
-
-                const id = this.getNextId();
-                const segment: TranscriptSegment = {
-                  id: `aws-${Date.now()}-${id}`,
-                  speaker: this.source === 'mic' ? 'you' : 'other',
-                  speakerName: this.source === 'mic' ? 'You' : 'Customer',
-                  text,
-                  timestamp: Date.now(),
-                  endTimestamp: Date.now(),
-                  confidence: result.IsPartial ? 0.6 : 0.9,
-                  isPartial: result.IsPartial ?? false,
-                };
-
-                this.segments.push(segment);
-              }
+              this.segments.push({
+                id: `aws-${Date.now()}-${this.getNextId()}`,
+                speaker: this.source === 'mic' ? 'you' : 'other',
+                speakerName: this.source === 'mic' ? 'You' : 'Customer',
+                text,
+                timestamp: Date.now(),
+                endTimestamp: Date.now(),
+                confidence: result.IsPartial ? 0.6 : 0.9,
+                isPartial: result.IsPartial ?? false,
+              });
             }
           }
         }
       }
-    } catch (err: any) {
-      if (!this.stopping) {
-        throw err;
-      }
-    } finally {
-      this.ended = true;
     }
-  }
 
-  /**
-   * Push audio data into the stream
-   */
-  pushAudio(pcmData: Buffer): void {
-    // Feed in smaller chunks (~100ms each) for lower latency
-    const chunkSize = 3200; // 100ms at 16kHz 16-bit mono
-    for (let i = 0; i < pcmData.length; i += chunkSize) {
-      this.audioQueue.push(pcmData.subarray(i, Math.min(i + chunkSize, pcmData.length)));
-    }
-    // Wake up the generator
-    if (this.audioResolve) {
-      this.audioResolve();
-      this.audioResolve = null;
-    }
-  }
-
-  /**
-   * Drain collected segments since last call
-   */
-  drainSegments(): TranscriptSegment[] {
-    const result = this.segments.splice(0, this.segments.length);
-    return result;
-  }
-
-  /**
-   * Stop the stream
-   */
-  stop(): void {
-    this.stopping = true;
-    if (this.audioResolve) {
-      this.audioResolve();
-      this.audioResolve = null;
-    }
+    this.ended = true;
   }
 }

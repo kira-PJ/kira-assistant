@@ -69,15 +69,16 @@ export class TranscriptionService extends EventEmitter {
       return;
     }
 
-    this.queue.push(chunk);
-
-    // Trim queue if it grows too large (drop oldest)
-    while (this.queue.length > this.maxQueueSize) {
-      this.queue.shift();
-    }
-
-    if (!this.processing) {
-      await this.processQueue();
+    // For persistent streaming: push immediately, don't queue
+    // The engine accumulates audio and emits results asynchronously
+    try {
+      const segments = await this.engine.transcribe(chunk.buffer, chunk.source);
+      for (const segment of segments) {
+        this.transcript.push(segment);
+        this.emit('segment', segment);
+      }
+    } catch (err) {
+      this.emit('error', err instanceof Error ? err : new Error(String(err)));
     }
   }
 
