@@ -6,6 +6,7 @@ import SuggestionsPanel from './components/panels/SuggestionsPanel';
 import ContextPanel from './components/panels/ContextPanel';
 import MetricsPanel from './components/panels/MetricsPanel';
 import ActionsPanel from './components/panels/ActionsPanel';
+import HistoryPanel from './components/panels/HistoryPanel';
 import CollapsedStrip from './components/CollapsedStrip';
 import SetupWizard from './components/SetupWizard';
 import PreCallPanel, { PreCallConfig } from './components/PreCallPanel';
@@ -18,7 +19,7 @@ declare global {
   }
 }
 
-export type TabId = 'transcript' | 'suggestions' | 'context' | 'metrics' | 'actions';
+export type TabId = 'transcript' | 'suggestions' | 'context' | 'metrics' | 'actions' | 'history';
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabId>('transcript');
@@ -122,6 +123,8 @@ const App: React.FC = () => {
         );
       case 'actions':
         return <ActionsPanel />;
+      case 'history':
+        return <HistoryPanel />;
     }
   };
 

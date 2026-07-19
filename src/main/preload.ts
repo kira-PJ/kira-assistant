@@ -33,6 +33,10 @@ contextBridge.exposeInMainWorld('ghostAPI', {
   // === AI manual trigger ===
   manualAsk: (question: string) => ipcRenderer.invoke('manual-ask', question),
 
+  // === Saved calls ===
+  listSavedCalls: () => ipcRenderer.invoke('list-saved-calls'),
+  getSavedCall: (id: string) => ipcRenderer.invoke('get-saved-call', id),
+
   // === Data export ===
   exportTranscript: (format: 'json' | 'csv') => ipcRenderer.invoke('export-transcript', format),
   exportSuggestions: () => ipcRenderer.invoke('export-suggestions'),

@@ -20,6 +20,8 @@ export interface GhostAPI {
   getTalkRatio: () => Promise<TalkRatio>;
   listAudioDevices: () => Promise<{ name: string; description: string; isMonitor: boolean }[]>;
   startSession: (config: any) => Promise<{ success: boolean; error?: string }>;
+  listSavedCalls: () => Promise<any[]>;
+  getSavedCall: (id: string) => Promise<any>;
 
   // First-run
   isFirstRun: () => Promise<boolean>;

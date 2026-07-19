@@ -12,6 +12,7 @@ const tabs: { id: TabId; label: string; icon: string }[] = [
   { id: 'context', label: 'Context', icon: '🔍' },
   { id: 'metrics', label: 'Metrics', icon: '📊' },
   { id: 'actions', label: 'Actions', icon: '✅' },
+  { id: 'history', label: 'History', icon: '📂' },
 ];
 
 const TabBar: React.FC<TabBarProps> = ({ activeTab, onTabChange }) => {
