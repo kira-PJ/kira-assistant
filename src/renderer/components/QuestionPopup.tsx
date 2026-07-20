@@ -80,11 +80,11 @@ const QuestionPopup: React.FC<QuestionPopupProps> = ({ suggestion, onDismiss }) 
         )}
 
         {/* Metadata: avoid */}
-        {suggestion.metadata?.avoid && (
+        {suggestion.metadata?.avoid ? (
           <p className="text-[10px] text-ghost-danger/80 mt-1.5 italic">
             Avoid: {String(suggestion.metadata.avoid)}
           </p>
-        )}
+        ) : null}
       </div>
     </div>
   );

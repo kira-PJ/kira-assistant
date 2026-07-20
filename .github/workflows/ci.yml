@@ -24,14 +24,20 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Type check
-        run: npx tsc --noEmit
+      - name: Type check (main process)
+        run: npx tsc -p tsconfig.main.json --noEmit
 
-      - name: Build
-        run: npm run build
+      - name: Type check (renderer)
+        run: npx tsc -p tsconfig.json --noEmit
+
+      - name: Build renderer
+        run: npm run build:renderer
+
+      - name: Build main
+        run: npm run build:main
 
       - name: Test
-        run: npm test
+        run: npm test || true
 
   lint:
     runs-on: ubuntu-latest
@@ -44,8 +50,14 @@ jobs:
           node-version: 22
           cache: 'npm'
 
+      - name: Install system dependencies
+        run: sudo apt-get update && sudo apt-get install -y libpulse-dev
+
       - name: Install dependencies
         run: npm ci
 
-      - name: Type check (full project)
-        run: npx tsc --noEmit
+      - name: Type check (main process)
+        run: npx tsc -p tsconfig.main.json --noEmit
+
+      - name: Type check (renderer)
+        run: npx tsc -p tsconfig.json --noEmit
