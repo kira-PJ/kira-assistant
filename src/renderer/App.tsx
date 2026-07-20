@@ -5,13 +5,13 @@ import TranscriptPanel from './components/panels/TranscriptPanel';
 import SuggestionsPanel from './components/panels/SuggestionsPanel';
 import ContextPanel from './components/panels/ContextPanel';
 import MetricsPanel from './components/panels/MetricsPanel';
-import ActionsPanel from './components/panels/ActionsPanel';
 import HistoryPanel from './components/panels/HistoryPanel';
 import SummaryPanel from './components/panels/SummaryPanel';
 import CollapsedStrip from './components/CollapsedStrip';
 import SetupWizard from './components/SetupWizard';
 import PreCallPanel, { PreCallConfig } from './components/PreCallPanel';
 import QuestionPopup from './components/QuestionPopup';
+import ErrorBoundary from './components/ErrorBoundary';
 import LoginScreen from './components/LoginScreen';
 import SettingsModal from './components/SettingsModal';
 import { useSession } from './hooks/useSession';
@@ -24,7 +24,7 @@ declare global {
   }
 }
 
-export type TabId = 'transcript' | 'suggestions' | 'context' | 'metrics' | 'actions' | 'history' | 'summary';
+export type TabId = 'transcript' | 'suggestions' | 'context' | 'metrics' | 'history' | 'summary';
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabId>('transcript');
@@ -35,6 +35,7 @@ const App: React.FC = () => {
   const [showLogin, setShowLogin] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [syncStatus, setSyncStatus] = useState<{ pending: number; failed: number; total: number }>({ pending: 0, failed: 0, total: 0 });
 
   const session = useSession();
   const { theme, toggleTheme } = useTheme();
@@ -59,12 +60,18 @@ const App: React.FC = () => {
     });
 
     // Listen for auth expiry
-    const cleanup = window.ghostAPI?.onAuthStateChange?.((state) => {
+    const cleanupAuth = window.ghostAPI?.onAuthStateChange?.((state) => {
       if (!state.isAuthenticated) {
         setShowLogin(true);
       }
     });
-    return () => cleanup?.();
+
+    // Listen for sync status
+    const cleanupSync = window.ghostAPI?.onSyncStatus?.((status) => {
+      setSyncStatus(status);
+    });
+
+    return () => { cleanupAuth?.(); cleanupSync?.(); };
   }, []);
 
   // Check first-run
@@ -131,6 +138,7 @@ const App: React.FC = () => {
           sessionState={session.sessionState}
           callType={session.callType}
           theme={theme}
+          syncStatus={syncStatus}
           onToggleCapture={handleToggleCapture}
           onCollapse={toggleCollapse}
           onCallTypeChange={session.changeCallType}
@@ -169,8 +177,6 @@ const App: React.FC = () => {
             systemActive={session.systemActive}
           />
         );
-      case 'actions':
-        return <ActionsPanel />;
       case 'history':
         return <HistoryPanel />;
       case 'summary':
@@ -185,6 +191,7 @@ const App: React.FC = () => {
         sessionState={session.sessionState}
         callType={session.callType}
         theme={theme}
+        syncStatus={syncStatus}
         onToggleCapture={handleToggleCapture}
         onCollapse={toggleCollapse}
         onCallTypeChange={session.changeCallType}
@@ -197,7 +204,11 @@ const App: React.FC = () => {
           ⚠ {session.error}
         </div>
       )}
-      <main className="flex-1 overflow-hidden">{renderPanel()}</main>
+      <main className="flex-1 overflow-hidden">
+        <ErrorBoundary fallbackLabel="this panel">
+          {renderPanel()}
+        </ErrorBoundary>
+      </main>
       <QuestionPopup
         suggestion={questionPopup}
         onDismiss={() => setQuestionPopup(null)}

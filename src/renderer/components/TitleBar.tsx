@@ -7,6 +7,7 @@ interface TitleBarProps {
   sessionState: SessionState;
   callType: CallType;
   theme: Theme;
+  syncStatus?: { pending: number; failed: number; total: number };
   onToggleCapture: () => void;
   onCollapse: () => void;
   onCallTypeChange: (type: CallType) => void;
@@ -28,6 +29,7 @@ const TitleBar: React.FC<TitleBarProps> = ({
   sessionState,
   callType,
   theme,
+  syncStatus,
   onToggleCapture,
   onCollapse,
   onCallTypeChange,
@@ -46,6 +48,21 @@ const TitleBar: React.FC<TitleBarProps> = ({
     <div className="draggable flex items-center justify-between h-10 px-3 bg-ghost-surface border-b border-ghost-border shrink-0">
       <div className="flex items-center gap-2">
         <span className="text-ghost-accent font-bold text-[13px]">K.I.R.A.</span>
+        {/* Sync status indicator */}
+        {syncStatus && syncStatus.total > 0 && (
+          <span
+            className={`w-2 h-2 rounded-full ${
+              syncStatus.failed > 0 ? 'bg-ghost-danger' :
+              syncStatus.pending > 0 ? 'bg-ghost-warning animate-pulse' :
+              'bg-ghost-accent'
+            }`}
+            title={
+              syncStatus.failed > 0 ? `${syncStatus.failed} failed to sync` :
+              syncStatus.pending > 0 ? `${syncStatus.pending} pending sync` :
+              'All synced'
+            }
+          />
+        )}
         <select
           value={callType}
           onChange={(e) => onCallTypeChange(e.target.value as CallType)}

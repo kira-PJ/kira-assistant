@@ -121,8 +121,10 @@ export class KiraStack extends cdk.Stack {
       restApiName: 'kira-api',
       description: 'K.I.R.A. backend API',
       defaultCorsPreflightOptions: {
-        allowOrigins: apigateway.Cors.ALL_ORIGINS,
+        allowOrigins: ['https://kira.sentibay.com', 'https://d3722i2y1crm55.cloudfront.net', 'app://kira-assistant'],
         allowMethods: apigateway.Cors.ALL_METHODS,
+        allowHeaders: ['Content-Type', 'Authorization'],
+        allowCredentials: true,
       },
     });
 

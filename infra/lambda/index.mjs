@@ -18,6 +18,8 @@ const TRANSCRIPTS_BUCKET = process.env.TRANSCRIPTS_BUCKET;
  *   POST /search        — search across calls
  */
 export const handler = async (event) => {
+  // Store event for CORS origin resolution
+  globalThis._currentEvent = event;
   const method = event.httpMethod;
   const path = event.resource;
   const userId = extractUserId(event);
@@ -73,22 +75,42 @@ async function listCalls(userId) {
 }
 
 async function saveCall(userId, body) {
+  // === Input Validation ===
+  if (!body || typeof body !== 'object') {
+    return response(400, { error: 'Request body must be a JSON object' });
+  }
+
+  // Size check — reject payloads over 2MB (Lambda limit is 6MB, but let's be conservative)
+  const bodySize = JSON.stringify(body).length;
+  if (bodySize > 2 * 1024 * 1024) {
+    return response(413, { error: 'Payload too large. Maximum 2MB.' });
+  }
+
+  // Validate callId format
   const callId = body.summary?.id || body.callId || `call-${Date.now()}`;
+  if (typeof callId !== 'string' || callId.length > 100 || !/^[a-zA-Z0-9_-]+$/.test(callId)) {
+    return response(400, { error: 'Invalid callId format' });
+  }
+
+  // Sanitize string fields (prevent XSS if displayed in dashboard)
+  const sanitize = (str) => typeof str === 'string' ? str.slice(0, 1000).replace(/[<>]/g, '') : '';
+  const sanitizeLong = (str) => typeof str === 'string' ? str.slice(0, 10000) : '';
+
   const now = new Date().toISOString();
 
   // Extract metadata for DynamoDB
   const item = {
     userId,
     callId,
-    callName: body.summary?.title || body.name || 'Untitled Call',
+    callName: sanitize(body.summary?.title || body.name || 'Untitled Call'),
     callDate: body.summary?.date ? new Date(body.summary.date).toISOString() : now,
-    durationMs: body.summary?.durationMs || body.durationMs || 0,
-    callType: body.summary?.callType || body.callType || 'discovery',
-    participants: body.summary?.participants?.join(', ') || body.participants || '',
-    myRole: body.myRole || 'leading',
-    segmentCount: body.segmentCount || 0,
-    context: body.context || body.summary?.synopsis || '',
-    score: body.score?.overall || 0,
+    durationMs: Math.max(0, Math.min(Number(body.summary?.durationMs || body.durationMs) || 0, 86400000)), // max 24h
+    callType: sanitize(body.summary?.callType || body.callType || 'discovery'),
+    participants: sanitize(body.summary?.participants?.join(', ') || body.participants || ''),
+    myRole: sanitize(body.myRole || 'leading'),
+    segmentCount: Math.max(0, Math.min(Number(body.segmentCount) || 0, 50000)),
+    context: sanitizeLong(body.context || body.summary?.synopsis || ''),
+    score: Math.max(0, Math.min(Number(body.score?.overall) || 0, 100)),
     talkRatio: body.talkRatio || { you: 50, other: 50 },
     totalWords: body.totalWords || { you: 0, other: 0 },
     createdAt: now,
@@ -166,8 +188,11 @@ async function getCall(userId, callId) {
 }
 
 async function searchCalls(userId, query) {
-  if (!query) {
-    return response(400, { error: 'query parameter required' });
+  if (!query || typeof query !== 'string') {
+    return response(400, { error: 'query parameter required (string)' });
+  }
+  if (query.length > 200) {
+    return response(400, { error: 'query too long (max 200 chars)' });
   }
 
   // Query all calls for user then filter (DynamoDB has no FTS)
@@ -209,14 +234,25 @@ function extractUserId(event) {
   return null;
 }
 
+const ALLOWED_ORIGINS = new Set([
+  'https://kira.sentibay.com',
+  'https://d3722i2y1crm55.cloudfront.net',
+  'app://kira-assistant',
+]);
+
 function response(statusCode, body) {
+  const event = globalThis._currentEvent;
+  const requestOrigin = event?.headers?.origin || event?.headers?.Origin || '';
+  const origin = ALLOWED_ORIGINS.has(requestOrigin) ? requestOrigin : 'https://kira.sentibay.com';
+
   return {
     statusCode,
     headers: {
       'Content-Type': 'application/json',
-      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Origin': origin,
       'Access-Control-Allow-Headers': 'Content-Type,Authorization',
       'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
+      'Access-Control-Allow-Credentials': 'true',
     },
     body: JSON.stringify(body),
   };
