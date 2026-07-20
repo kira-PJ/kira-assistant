@@ -403,9 +403,45 @@ app.whenReady().then(async () => {
     return orchestrator?.getSavedCall(id) ?? null;
   });
 
+  ipcMain.handle('delete-saved-call', async (_event, id: string) => {
+    try {
+      // Delete locally
+      const storage = (orchestrator as any)?.storage;
+      if (storage?.deleteCall) {
+        await storage.deleteCall(id);
+      }
+      // Also delete the .wav recording if it exists
+      const path = require('path');
+      const fs = require('fs/promises');
+      const callsDir = require('path').join(app.getPath('userData'), 'calls');
+      await fs.unlink(path.join(callsDir, `${id}.wav`)).catch(() => {});
+      log.info('Call deleted', { id });
+      return { success: true };
+    } catch (err: any) {
+      log.error('Failed to delete call', { id, error: err.message });
+      return { success: false, error: err.message };
+    }
+  });
+
   // === Speaker rename (mid-session) ===
   ipcMain.handle('rename-speaker', (_event, source: 'you' | 'other', name: string) => {
     orchestrator?.renameSpeaker(source, name);
+  });
+
+  // === Voice enrollment ===
+  ipcMain.handle('voice-enrollment-start', () => {
+    (orchestrator as any)?.voiceProfile?.startEnrollment();
+    // Start capturing mic audio for enrollment
+    return { started: true };
+  });
+
+  ipcMain.handle('voice-enrollment-finish', async () => {
+    const success = await (orchestrator as any)?.voiceProfile?.finishEnrollment();
+    return { success };
+  });
+
+  ipcMain.handle('voice-profile-state', () => {
+    return (orchestrator as any)?.voiceProfile?.getState() ?? { enrolled: false };
   });
 
   ipcMain.handle('get-speaker-names', () => {

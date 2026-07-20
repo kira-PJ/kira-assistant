@@ -175,19 +175,36 @@ const HistoryPanel: React.FC = () => {
         </button>
       </div>
       {calls.map((call) => (
-        <button
+        <div
           key={call.id}
-          onClick={() => openCall(call.id)}
-          className="w-full text-left p-2.5 bg-ghost-surface rounded-md border border-ghost-border hover:border-ghost-accent/50 transition-colors"
+          className="flex items-center gap-2"
         >
-          <p className="text-xs font-medium text-ghost-text truncate">{call.name}</p>
-          <div className="flex gap-3 mt-1 text-[10px] text-ghost-text-dim">
-            <span>{new Date(call.date).toLocaleDateString()}</span>
-            <span>{Math.round(call.durationMs / 60000)} min</span>
-            <span className="capitalize">{call.callType}</span>
-            <span>{call.segmentCount} segments</span>
-          </div>
-        </button>
+          <button
+            onClick={() => openCall(call.id)}
+            className="flex-1 text-left p-2.5 bg-ghost-surface rounded-md border border-ghost-border hover:border-ghost-accent/50 transition-colors"
+          >
+            <p className="text-xs font-medium text-ghost-text truncate">{call.name}</p>
+            <div className="flex gap-3 mt-1 text-[10px] text-ghost-text-dim">
+              <span>{new Date(call.date).toLocaleDateString()}</span>
+              <span>{Math.round(call.durationMs / 60000)} min</span>
+              <span className="capitalize">{call.callType}</span>
+              <span>{call.segmentCount} segments</span>
+            </div>
+          </button>
+          <button
+            onClick={async (e) => {
+              e.stopPropagation();
+              if (confirm('Delete this call? This cannot be undone.')) {
+                await window.ghostAPI?.deleteSavedCall?.(call.id);
+                loadCalls();
+              }
+            }}
+            className="px-2 py-2 text-[11px] text-ghost-text-dim hover:text-ghost-danger hover:bg-ghost-danger/10 rounded transition-colors"
+            title="Delete call"
+          >
+            Delete
+          </button>
+        </div>
       ))}
     </div>
   );

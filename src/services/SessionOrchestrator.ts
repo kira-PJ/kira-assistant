@@ -1,6 +1,7 @@
 import { EventEmitter } from 'events';
 import { AudioCaptureService, AudioChunk } from './audio';
 import { AudioRecorder } from './audio/AudioRecorder';
+import { VoiceProfile } from './audio/VoiceProfile';
 import { TranscriptionService, TranscriptSegment } from './transcription';
 import { SpeakerIdentifier } from './transcription/SpeakerIdentifier';
 import { CoachingService, CoachingSuggestion, SentimentAnalysis, TalkRatioData } from './coaching';
@@ -26,6 +27,7 @@ export type SessionState = 'idle' | 'initializing' | 'active' | 'error';
 export class SessionOrchestrator extends EventEmitter {
   private audio: AudioCaptureService;
   private recorder: AudioRecorder;
+  private voiceProfile: VoiceProfile;
   private transcription: TranscriptionService;
   private coaching: CoachingService;
   private speakerIdentifier: SpeakerIdentifier;
@@ -57,6 +59,8 @@ export class SessionOrchestrator extends EventEmitter {
     });
 
     this.recorder = new AudioRecorder(16000, 1);
+    this.voiceProfile = new VoiceProfile();
+    this.voiceProfile.load();
 
     this.transcription = new TranscriptionService(
       config.transcriptionMode ?? 'cloud',
@@ -201,11 +205,16 @@ export class SessionOrchestrator extends EventEmitter {
         console.log(`[Orchestrator] Audio chunk #${chunkCount}: source=${chunk.source}, active=${chunk.isActive}, len=${chunk.buffer.length}`);
       }
       // Noise gate: only process mic audio if energy is above threshold
-      // Threshold 600 filters background chatter effectively
+      // AND matches the enrolled user's voice characteristics
       if (chunk.source === 'mic') {
         const energy = this.calculateEnergy(chunk.buffer);
         if (energy < 600) {
           return; // Background noise — don't transcribe
+        }
+        // Voice profile check — reject if it doesn't match user
+        const voiceMatch = this.voiceProfile.matchesUser(chunk.buffer);
+        if (voiceMatch < 0.4) {
+          return; // Likely someone else talking near the mic
         }
       }
       this.transcription.processChunk(chunk);

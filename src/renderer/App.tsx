@@ -12,6 +12,7 @@ import SetupWizard from './components/SetupWizard';
 import PreCallPanel, { PreCallConfig } from './components/PreCallPanel';
 import QuestionPopup from './components/QuestionPopup';
 import ErrorBoundary from './components/ErrorBoundary';
+import UpdateBanner from './components/UpdateBanner';
 import LoginScreen from './components/LoginScreen';
 import SettingsModal from './components/SettingsModal';
 import { useSession } from './hooks/useSession';
@@ -210,6 +211,7 @@ const App: React.FC = () => {
         onToggleTheme={toggleTheme}
         onOpenSettings={() => setShowSettings(true)}
       />
+      <UpdateBanner />
       <TabBar activeTab={activeTab} onTabChange={setActiveTab} />
       {session.error && (
         <div className="px-3 py-1.5 bg-ghost-danger/10 text-ghost-danger text-xs border-b border-ghost-danger/20">

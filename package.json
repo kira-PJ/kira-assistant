@@ -1,6 +1,6 @@
 {
   "name": "kira-assistant",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "K.I.R.A. — Knowledge, Insights & Response Assistant. Invisible AI call companion with real-time transcription and coaching.",
   "main": "dist/main/main/index.js",
   "author": {

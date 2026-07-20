@@ -22,6 +22,7 @@ export interface GhostAPI {
   startSession: (config: any) => Promise<{ success: boolean; error?: string }>;
   listSavedCalls: () => Promise<any[]>;
   getSavedCall: (id: string) => Promise<any>;
+  deleteSavedCall: (id: string) => Promise<{ success: boolean; error?: string }>;
   renameSpeaker: (source: 'you' | 'other', name: string) => Promise<void>;
   getSpeakerNames: () => Promise<Record<string, string>>;
   copyToClipboard: (text: string) => void;

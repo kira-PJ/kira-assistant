@@ -36,6 +36,7 @@ contextBridge.exposeInMainWorld('ghostAPI', {
   // === Saved calls ===
   listSavedCalls: () => ipcRenderer.invoke('list-saved-calls'),
   getSavedCall: (id: string) => ipcRenderer.invoke('get-saved-call', id),
+  deleteSavedCall: (id: string) => ipcRenderer.invoke('delete-saved-call', id),
 
   // === Speaker management ===
   renameSpeaker: (source: 'you' | 'other', name: string) => ipcRenderer.invoke('rename-speaker', source, name),
@@ -66,6 +67,26 @@ contextBridge.exposeInMainWorld('ghostAPI', {
     const handler = (_event: any, result: any) => callback(result);
     ipcRenderer.on('post-call-result', handler);
     return () => ipcRenderer.removeListener('post-call-result', handler);
+  },
+
+  // === Updates ===
+  checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),
+  downloadUpdate: () => ipcRenderer.invoke('download-update'),
+  installUpdate: () => ipcRenderer.invoke('install-update'),
+  onUpdateAvailable: (callback: (info: { version: string; releaseNotes: string; releaseDate: string }) => void) => {
+    const handler = (_event: any, info: any) => callback(info);
+    ipcRenderer.on('update-available', handler);
+    return () => ipcRenderer.removeListener('update-available', handler);
+  },
+  onUpdateProgress: (callback: (progress: { percent: number }) => void) => {
+    const handler = (_event: any, progress: any) => callback(progress);
+    ipcRenderer.on('update-progress', handler);
+    return () => ipcRenderer.removeListener('update-progress', handler);
+  },
+  onUpdateDownloaded: (callback: (info: { version: string }) => void) => {
+    const handler = (_event: any, info: any) => callback(info);
+    ipcRenderer.on('update-downloaded', handler);
+    return () => ipcRenderer.removeListener('update-downloaded', handler);
   },
 
   // === Auth ===
