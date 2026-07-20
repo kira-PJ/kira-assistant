@@ -38,6 +38,9 @@ contextBridge.exposeInMainWorld('ghostAPI', {
   getSavedCall: (id: string) => ipcRenderer.invoke('get-saved-call', id),
   deleteSavedCall: (id: string) => ipcRenderer.invoke('delete-saved-call', id),
 
+  // === Audio device switching (mid-session) ===
+  switchAudioDevice: (type: 'mic' | 'system', deviceName: string) => ipcRenderer.invoke('switch-audio-device', type, deviceName),
+
   // === Speaker management ===
   renameSpeaker: (source: 'you' | 'other', name: string) => ipcRenderer.invoke('rename-speaker', source, name),
   getSpeakerNames: () => ipcRenderer.invoke('get-speaker-names'),

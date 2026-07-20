@@ -353,6 +353,37 @@ app.whenReady().then(async () => {
     }
   });
 
+  // Switch audio devices mid-session (without stopping capture)
+  ipcMain.handle('switch-audio-device', (_event, type: 'mic' | 'system', deviceName: string) => {
+    if (process.platform === 'linux') {
+      try {
+        const { execSync } = require('child_process');
+        if (type === 'system') {
+          const sinkName = deviceName.replace('.monitor', '');
+          execSync(`pactl set-default-sink ${sinkName}`, { timeout: 3000 });
+          // Move all playing streams to the new sink
+          try {
+            const inputs = execSync('pactl list short sink-inputs', { timeout: 3000 }).toString();
+            inputs.split('\n').filter((l: string) => l.trim()).forEach((l: string) => {
+              const id = l.split('\t')[0];
+              execSync(`pactl move-sink-input ${id} ${sinkName}`, { timeout: 2000 }).toString();
+            });
+          } catch { /* no streams to move */ }
+          log.info('Switched system audio mid-session', { sink: sinkName });
+        } else {
+          execSync(`pactl set-default-source ${deviceName}`, { timeout: 3000 });
+          log.info('Switched mic mid-session', { source: deviceName });
+        }
+        return { success: true };
+      } catch (err: any) {
+        return { success: false, error: err.message };
+      }
+    }
+    // Mac/Windows: just log — native module handles default device
+    log.info('Device switch requested (non-Linux)', { type, device: deviceName });
+    return { success: true };
+  });
+
   ipcMain.handle('stop-capture', () => {
     orchestrator?.stop();
     log.info('Capture stopped');
