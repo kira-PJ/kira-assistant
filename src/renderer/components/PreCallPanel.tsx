@@ -158,7 +158,17 @@ const PreCallPanel: React.FC<PreCallPanelProps> = ({ onStart, onCancel }) => {
                 : 'border-ghost-border text-ghost-text-dim'
             }`}
           >
-            Leading / Presenting
+            Leading
+          </button>
+          <button
+            onClick={() => setMyRole('team_member' as any)}
+            className={`flex-1 py-1.5 px-2 rounded text-xs border ${
+              myRole === ('team_member' as any)
+                ? 'border-ghost-accent text-ghost-accent bg-ghost-accent/10'
+                : 'border-ghost-border text-ghost-text-dim'
+            }`}
+          >
+            Team Support
           </button>
           <button
             onClick={() => setMyRole('attending')}
@@ -168,7 +178,7 @@ const PreCallPanel: React.FC<PreCallPanelProps> = ({ onStart, onCancel }) => {
                 : 'border-ghost-border text-ghost-text-dim'
             }`}
           >
-            Attending / Learning
+            Attending
           </button>
         </div>
       </div>

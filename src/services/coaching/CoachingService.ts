@@ -235,7 +235,7 @@ Respond with JSON:
    */
   async manualAsk(question: string): Promise<void> {
     const context = this.getContext();
-    const systemPrompt = PromptTemplates.getSystemPrompt(this.callType);
+    const systemPrompt = PromptTemplates.getSystemPrompt(this.callType, this.meetingContext.myRole);
     const prompt = `The user pressed a hotkey and asked: "${question}"
 
 Current call context:
@@ -285,6 +285,7 @@ Respond with JSON:
 
     return {
       callType: this.callType,
+      myRole: this.meetingContext.myRole,
       recentTranscript,
       fullTranscriptLength: this.segments.length,
       talkRatio: this.talkRatio,
@@ -376,7 +377,7 @@ Respond with JSON:
 
     // If ambiguous, ask Bedrock
     if (local.confidence < 0.6 && recentOther.length > 50) {
-      const systemPrompt = PromptTemplates.getSystemPrompt(this.callType);
+      const systemPrompt = PromptTemplates.getSystemPrompt(this.callType, this.meetingContext.myRole);
       const prompt = PromptTemplates.sentimentPrompt(recentOther);
       const result = await this.llm.converseJSON<{
         sentiment: string;
@@ -409,7 +410,7 @@ Respond with JSON:
     const context = this.getContext();
     if (context.recentTranscript.length < 50) return;
 
-    const systemPrompt = PromptTemplates.getSystemPrompt(this.callType);
+    const systemPrompt = PromptTemplates.getSystemPrompt(this.callType, this.meetingContext.myRole);
     const prompt = PromptTemplates.questionSuggestionPrompt(context);
 
     const result = await this.llm.converseJSON<{
@@ -431,7 +432,7 @@ Respond with JSON:
 
   private async queueTechLookup(mention: TechMention): Promise<void> {
     const context = this.getContext();
-    const systemPrompt = PromptTemplates.getSystemPrompt(this.callType);
+    const systemPrompt = PromptTemplates.getSystemPrompt(this.callType, this.meetingContext.myRole);
     const prompt = PromptTemplates.techContextPrompt(mention.term, mention.context);
 
     try {
@@ -460,7 +461,7 @@ Respond with JSON:
 
   private async queueAnswerQuestion(question: string): Promise<void> {
     const context = this.getContext();
-    const systemPrompt = PromptTemplates.getSystemPrompt(this.callType);
+    const systemPrompt = PromptTemplates.getSystemPrompt(this.callType, this.meetingContext.myRole);
 
     // Check if we have learned patterns for similar questions
     const relevantPatterns = this.learning.getRelevantPatterns(question, this.callType, 2);
@@ -597,7 +598,7 @@ Respond with JSON:
     if (this.meetingContext.myRole === 'attending') return;
 
     const context = this.getContext();
-    const systemPrompt = PromptTemplates.getSystemPrompt(this.callType);
+    const systemPrompt = PromptTemplates.getSystemPrompt(this.callType, this.meetingContext.myRole);
     const prompt = `There's been a pause in the conversation (15+ seconds of silence).
 
 Context so far:

@@ -201,11 +201,11 @@ export class SessionOrchestrator extends EventEmitter {
         console.log(`[Orchestrator] Audio chunk #${chunkCount}: source=${chunk.source}, active=${chunk.isActive}, len=${chunk.buffer.length}`);
       }
       // Noise gate: only process mic audio if energy is above threshold
-      // This filters out background chatter and ambient noise
+      // Threshold 600 filters background chatter effectively
       if (chunk.source === 'mic') {
         const energy = this.calculateEnergy(chunk.buffer);
-        if (energy < 200) { // Below threshold = background noise, skip
-          return;
+        if (energy < 600) {
+          return; // Background noise — don't transcribe
         }
       }
       this.transcription.processChunk(chunk);
@@ -220,7 +220,13 @@ export class SessionOrchestrator extends EventEmitter {
     this.transcription.on('segment', (segment: TranscriptSegment) => {
       // Apply speaker name detection
       const labeled = this.speakerIdentifier.processSegment(segment);
-      this.emit('segment', labeled);
+
+      // Filter filler-only segments from display (but still pass to coaching for context)
+      const isFillerOnly = this.isFillerSegment(labeled.text);
+      if (!isFillerOnly) {
+        this.emit('segment', labeled);
+      }
+      // Always pass to coaching (even filler gives context about who's speaking)
       this.coaching.processSegment(labeled);
     });
 
@@ -280,6 +286,31 @@ export class SessionOrchestrator extends EventEmitter {
       sum += sample * sample;
     }
     return Math.sqrt(sum / samples);
+  }
+
+  /**
+   * Check if a segment is filler-only (mhm, ok, yeah, single words, noise).
+   * These are hidden from the transcript display but kept for coaching context.
+   */
+  private isFillerSegment(text: string): boolean {
+    const cleaned = text.trim().replace(/[.,!?]/g, '').trim().toLowerCase();
+    // Single word or very short
+    if (cleaned.split(/\s+/).length <= 2) {
+      const fillers = new Set([
+        'mhm', 'mm', 'hmm', 'uh', 'um', 'oh', 'ah', 'ok', 'okay',
+        'yeah', 'yes', 'yep', 'right', 'sure', 'no', 'nope',
+        'so', 'well', 'i', 'the', 'it', 'some', 'do', 'go',
+        'he', 'she', 'me', 'you', 'we', 'they', 'to', 'or',
+        'just', 'help', 'thank', 'thanks', 'bye', 'hi',
+        'mhm mhm', 'yeah yeah', 'ok ok', 'uh huh',
+      ]);
+      return fillers.has(cleaned);
+    }
+    // Mostly filler patterns
+    if (/^(mhm|yeah|ok|uh|um|oh|ah|right|sure|yes|no)\s*(,?\s*(mhm|yeah|ok|uh|um|oh|ah|right|sure|yes|no))*\s*[.,!?]?$/i.test(cleaned)) {
+      return true;
+    }
+    return false;
   }
 
   private async autoSaveCall(): Promise<void> {

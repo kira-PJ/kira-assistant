@@ -8,9 +8,9 @@ import { CallType, CoachingContext } from './types';
  */
 export class PromptTemplates {
   /**
-   * Get the system prompt for a given call type
+   * Get the system prompt for a given call type and role
    */
-  static getSystemPrompt(callType: CallType): string {
+  static getSystemPrompt(callType: CallType, role?: string): string {
     const base = `You are an expert AI coaching assistant helping a professional during a live call. 
 You have access to the real-time transcript and must provide actionable, concise guidance.
 Your responses should be short (2-4 sentences max) and immediately usable.
@@ -18,13 +18,60 @@ Never include pleasantries or filler. Be direct and helpful.
 Format output as JSON matching the requested schema.`;
 
     const typeSpecific = this.getCallTypeInstructions(callType);
-    return `${base}\n\n${typeSpecific}`;
+
+    // Role-specific overlay
+    let roleInstructions = '';
+    if (role === 'team_member') {
+      roleInstructions = `\n\nCRITICAL ROLE CONTEXT: The user is a TEAM MEMBER (Solutions Architect/SE) supporting their colleagues in this call. They are NOT the lead speaker.
+      
+RULES FOR TEAM MEMBER ROLE:
+- DO NOT suggest discovery questions — the user is not interviewing the customer
+- DO NOT suggest the user interrupt or ask random questions
+- ONLY suggest things when the customer asks a technical question that the user could help answer
+- When customer asks something: prepare a technical answer the user can contribute
+- Track action items and commitments being made
+- Note if something technical was claimed incorrectly — user can gently correct
+- Note objections or concerns from the customer that weren't fully addressed
+- Be VERY quiet — max 2-3 suggestions per 10 minutes unless customer directly asks something technical
+- The user's job: support the team, jump in with technical depth ONLY when needed`;
+    } else if (role === 'attending') {
+      roleInstructions = `\n\nROLE: The user is ATTENDING/LISTENING (not leading). Be very conservative with suggestions. Only suggest when truly helpful.`;
+    }
+
+    return `${base}\n\n${typeSpecific}${roleInstructions}`;
   }
 
   /**
    * Generate a question suggestion prompt - tailored per call type and role
    */
   static questionSuggestionPrompt(context: CoachingContext): string {
+    // For team_member role: DON'T suggest questions to ask. Instead suggest answers/support.
+    if (context.myRole === 'team_member') {
+      return `You are coaching a team member (Solutions Architect/SE) who is SUPPORTING their team in this call. They are NOT the lead.
+
+Their job: jump in with technical depth ONLY when the customer asks something technical that hasn't been fully addressed.
+
+Call type: ${context.callType}
+Call duration: ${Math.round(context.callDurationMs / 60000)} minutes
+
+Recent transcript:
+${context.recentTranscript}
+
+RULES:
+- Only suggest if the CUSTOMER just asked a technical question that wasn't fully answered
+- If the team lead already answered well, respond with empty: {"questions": []}
+- Do NOT suggest questions the user should ask — they are support, not leading
+- If you DO suggest, frame it as: "You could add..." or "Technical point to contribute..."
+- Silence is the default. Only speak up when you have genuine technical value to add.
+
+Respond with JSON:
+{
+  "questions": [
+    { "question": "Technical point or answer you could contribute right now", "reason": "why this adds value", "priority": "high|medium|low" }
+  ]
+}`;
+    }
+
     const typeGuidance = this.getQuestionGuidance(context.callType);
 
     return `Based on this conversation, suggest 1 highly relevant question the user should ask next.

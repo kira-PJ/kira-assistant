@@ -51,6 +51,7 @@ export interface TechMention {
 
 export interface CoachingContext {
   callType: CallType;
+  myRole?: string;
   recentTranscript: string;      // Last ~2000 tokens of transcript
   fullTranscriptLength: number;
   talkRatio: TalkRatioData;

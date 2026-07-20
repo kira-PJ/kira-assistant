@@ -34,13 +34,29 @@ export class SpeakerIdentifier {
   private introPatterns: RegExp[];
 
   constructor() {
+    // Self-introduction patterns
     this.introPatterns = [
       /(?:(?:hi|hey|hello|good morning|good afternoon),?\s*)?(?:I'm|I am|my name is|this is|it's)\s+([A-Z][a-z]+)/i,
       /(?:hi|hey|hello),?\s*([A-Z][a-z]+)\s+here/i,
       /(?:this is|it's|I'm)\s+([A-Z][a-z]+)\s+(?:from|at|with)/i,
       /(?:let me introduce myself,?\s*)?(?:I'm|I am)\s+([A-Z][a-z]+)/i,
     ];
+
+    // Context patterns — detecting names mentioned by others
+    // "let Timothy answer", "Kevin has a question", "thank you Timothy"
+    this.contextPatterns = [
+      /\b(?:let|let me let|I'll let|over to)\s+([A-Z][a-z]+)\s+(?:answer|explain|respond|take|handle|go ahead|speak)/i,
+      /\b(?:thank you|thanks),?\s+([A-Z][a-z]+)/i,
+      /\b([A-Z][a-z]+),?\s+(?:please go ahead|go ahead|over to you|your turn|you can|please)/i,
+      /\b([A-Z][a-z]+)\s+(?:has a question|asked|is asking|wants to know|would like)/i,
+      /\b(?:welcome|hi|hey|hello),?\s+([A-Z][a-z]+)/i,
+      /\b(?:yes|yeah),?\s+([A-Z][a-z]+)/i,
+      /\b([A-Z][a-z]+)\s+(?:will be|is going to|can|could|would)\s+(?:share|answer|explain|take|present)/i,
+      /\b(?:so|ok|right),?\s+([A-Z][a-z]+),?\s/i,
+    ];
   }
+
+  private contextPatterns: RegExp[];
 
   /**
    * Set call type to adjust default labels.
@@ -71,9 +87,13 @@ export class SpeakerIdentifier {
 
   /**
    * Process a segment — assign speaker name based on diarized speaker ID.
+   * Also detects names from conversational context:
+   * - Self-introductions ("I'm Timothy")
+   * - References ("let Timothy answer", "thank you Kevin")
+   * - Handoffs ("over to you Timothy" → next speaker = Timothy)
    */
   processSegment(segment: TranscriptSegment): TranscriptSegment {
-    // Per-segment override (manual edit of a specific segment)
+    // Per-segment override (manual edit)
     const override = this.segmentOverrides.get(segment.id);
     if (override) {
       return { ...segment, speakerName: override };
@@ -84,29 +104,88 @@ export class SpeakerIdentifier {
       return { ...segment, speakerName: this.youName };
     }
 
-    // Check if this speaker ID has been renamed (e.g., speaker_0 → "Timothy")
+    // If this is a new speaker ID and we predicted who it should be
+    if (this.pendingNextSpeaker && segment.speaker !== this.lastSpeakerId) {
+      this.speakerIdNames.set(segment.speaker, this.pendingNextSpeaker);
+      if (!this.participants.includes(this.pendingNextSpeaker)) {
+        this.participants.push(this.pendingNextSpeaker);
+      }
+      this.pendingNextSpeaker = null;
+    }
+
+    // Check if this speaker ID has been named already
     const namedSpeaker = this.speakerIdNames.get(segment.speaker);
     if (namedSpeaker) {
+      this.lastSpeakerId = segment.speaker;
+      // Still scan for name references (for predicting NEXT speaker)
+      this.detectContextNames(segment.text);
       return { ...segment, speakerName: namedSpeaker };
     }
 
-    // Try to detect a name introduction
-    const detectedName = this.detectName(segment.text);
-    if (detectedName) {
-      this.speakerIdNames.set(segment.speaker, detectedName);
-      if (!this.participants.includes(detectedName)) {
-        this.participants.push(detectedName);
+    // Try self-introduction detection
+    const selfName = this.detectSelfIntro(segment.text);
+    if (selfName) {
+      this.speakerIdNames.set(segment.speaker, selfName);
+      if (!this.participants.includes(selfName)) {
+        this.participants.push(selfName);
       }
-      return { ...segment, speakerName: detectedName };
+      this.lastSpeakerId = segment.speaker;
+      return { ...segment, speakerName: selfName };
     }
 
-    // Use Transcribe's speaker label if present (e.g., "Speaker 1")
+    // Scan for context names (handoffs, references)
+    this.detectContextNames(segment.text);
+
+    // Check if any pre-set participant matches a word in the text
+    const matchedParticipant = this.matchParticipantFromText(segment.text);
+    if (matchedParticipant && !namedSpeaker) {
+      // If someone SAYS a participant's name, the NEXT different speaker might be them
+      // Don't rename current speaker — it's a reference, not self-intro
+    }
+
+    this.lastSpeakerId = segment.speaker;
+
+    // Use Transcribe's speaker label if present
     if (segment.speakerName && segment.speakerName.startsWith('Speaker ')) {
       return segment;
     }
 
-    // Fallback
     return { ...segment, speakerName: this.defaultOtherName };
+  }
+
+  private lastSpeakerId: string | null = null;
+  private pendingNextSpeaker: string | null = null;
+
+  /**
+   * Detect names referenced in context (handoffs, thank-yous, etc.)
+   * When "let Timothy answer" is detected, mark Timothy as the next speaker.
+   */
+  private detectContextNames(text: string): void {
+    for (const pattern of this.contextPatterns) {
+      const match = text.match(pattern);
+      if (match && match[1]) {
+        const name = match[1].trim();
+        if (this.isValidName(name)) {
+          // This name was referenced — the next different speaker is likely this person
+          this.pendingNextSpeaker = name;
+          if (!this.participants.includes(name)) {
+            this.participants.push(name);
+          }
+        }
+      }
+    }
+  }
+
+  /**
+   * Try to match a pre-set participant name in the text
+   */
+  private matchParticipantFromText(text: string): string | null {
+    for (const p of this.participants) {
+      if (text.toLowerCase().includes(p.toLowerCase())) {
+        return p;
+      }
+    }
+    return null;
   }
 
   /**
@@ -169,17 +248,27 @@ export class SpeakerIdentifier {
     return this.speakerIdNames.get(speakerId);
   }
 
-  private detectName(text: string): string | null {
+  private detectSelfIntro(text: string): string | null {
     for (const pattern of this.introPatterns) {
       const match = text.match(pattern);
       if (match && match[1]) {
         const name = match[1].trim();
-        if (name.length >= 2 && name.length <= 15 && /^[A-Z]/.test(name)) {
-          const falsePositives = ['The', 'This', 'That', 'Here', 'There', 'Just', 'Well', 'Also', 'Actually'];
-          if (!falsePositives.includes(name)) return name;
-        }
+        if (this.isValidName(name)) return name;
       }
     }
     return null;
+  }
+
+  private isValidName(name: string): boolean {
+    if (name.length < 2 || name.length > 15) return false;
+    if (!/^[A-Z]/.test(name)) return false;
+    const falsePositives = new Set([
+      'The', 'This', 'That', 'Here', 'There', 'Just', 'Well', 'Also',
+      'Actually', 'So', 'Now', 'Then', 'Right', 'Sure', 'Yes', 'Yeah',
+      'Like', 'Very', 'Much', 'Good', 'Great', 'Nice', 'Fine', 'Thanks',
+      'Thank', 'Please', 'Sorry', 'What', 'How', 'Why', 'When', 'Where',
+      'Which', 'Who', 'Basically', 'Obviously', 'Absolutely', 'Definitely',
+    ]);
+    return !falsePositives.has(name);
   }
 }
