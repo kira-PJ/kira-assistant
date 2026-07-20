@@ -98,16 +98,7 @@ export class KiraStack extends cdk.Stack {
       functionName: 'kira-api',
       runtime: lambda.Runtime.NODEJS_20_X,
       handler: 'index.handler',
-      code: lambda.Code.fromInline(`
-        exports.handler = async (event) => {
-          const body = JSON.parse(event.body || '{}');
-          return {
-            statusCode: 200,
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ message: 'K.I.R.A. API', timestamp: Date.now() }),
-          };
-        };
-      `),
+      code: lambda.Code.fromAsset('lambda'),
       timeout: cdk.Duration.seconds(30),
       memorySize: 256,
       environment: {

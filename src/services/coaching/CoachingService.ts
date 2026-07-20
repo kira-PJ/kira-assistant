@@ -1,6 +1,6 @@
 import { EventEmitter } from 'events';
 import { TranscriptSegment } from '../transcription/types';
-import { BedrockClient } from './BedrockClient';
+import { ILLMClient, LLMClientOptions, LLMProvider, createLLMClient } from './LLMClient';
 import { TriggerDetector } from './TriggerDetector';
 import { PromptTemplates } from './PromptTemplates';
 import {
@@ -18,9 +18,11 @@ import {
  *
  * Processes transcript segments through trigger detection,
  * routes to appropriate AI agents, and emits coaching suggestions.
+ * Supports multiple LLM providers: Bedrock (Claude), Groq (Llama), Gemini.
  */
 export class CoachingService extends EventEmitter {
-  private bedrock: BedrockClient;
+  private llm: ILLMClient;
+  private llmOptions: LLMClientOptions;
   private detector: TriggerDetector;
   private callType: CallType = 'discovery';
   private segments: TranscriptSegment[] = [];
@@ -40,12 +42,38 @@ export class CoachingService extends EventEmitter {
   private summaryInterval = 300000; // 5 minutes between summaries
   private meetingContext: { name?: string; context?: string; myRole?: string; participants?: string } = {};
 
-  constructor(options: { region?: string; modelId?: string; callType?: CallType } = {}) {
+  constructor(options: {
+    region?: string;
+    modelId?: string;
+    callType?: CallType;
+    llmProvider?: LLMProvider;
+    groqApiKey?: string;
+    geminiApiKey?: string;
+  } = {}) {
     super();
-    this.bedrock = new BedrockClient({ region: options.region, modelId: options.modelId });
+    this.llmOptions = {
+      provider: options.llmProvider ?? 'bedrock',
+      awsRegion: options.region,
+      bedrockModelId: options.modelId,
+      groqApiKey: options.groqApiKey,
+      geminiApiKey: options.geminiApiKey,
+    };
+    this.llm = createLLMClient(this.llmOptions);
     this.detector = new TriggerDetector();
     this.callType = options.callType ?? 'discovery';
     this.callStartTime = Date.now();
+  }
+
+  /**
+   * Switch LLM provider at runtime (from settings)
+   */
+  switchProvider(provider: LLMProvider, apiKey?: string): void {
+    this.llm.destroy();
+    if (provider === 'groq' && apiKey) this.llmOptions.groqApiKey = apiKey;
+    if (provider === 'gemini' && apiKey) this.llmOptions.geminiApiKey = apiKey;
+    this.llmOptions.provider = provider;
+    this.llm = createLLMClient(this.llmOptions);
+    console.log(`[Coaching] Switched LLM provider to: ${provider}`);
   }
 
   setCallType(type: CallType): void {
@@ -120,7 +148,7 @@ Respond with JSON:
 }`;
 
     try {
-      const result = await this.bedrock.converseJSON<{
+      const result = await this.llm.converseJSON<{
         answer: string;
         sources: string[];
       }>(systemPrompt, prompt);
@@ -194,8 +222,9 @@ Respond with JSON:
         await this.runSentimentAnalysis();
       }
 
-      // Question suggestions every 4 segments (not 8)
-      if (this.segments.length >= 3 && this.segments.length % 4 === 0) {
+      // Question suggestions — less often for training (you're listening), more for discovery
+      const questionInterval = this.callType === 'training' ? 8 : 5;
+      if (this.segments.length >= 3 && this.segments.length % questionInterval === 0) {
         await this.runQuestionSuggestions();
       }
     } catch (err) {
@@ -221,7 +250,7 @@ Respond with JSON:
     if (local.confidence < 0.6 && recentOther.length > 50) {
       const systemPrompt = PromptTemplates.getSystemPrompt(this.callType);
       const prompt = PromptTemplates.sentimentPrompt(recentOther);
-      const result = await this.bedrock.converseJSON<{
+      const result = await this.llm.converseJSON<{
         sentiment: string;
         confidence: number;
         reason: string;
@@ -255,7 +284,7 @@ Respond with JSON:
     const systemPrompt = PromptTemplates.getSystemPrompt(this.callType);
     const prompt = PromptTemplates.questionSuggestionPrompt(context);
 
-    const result = await this.bedrock.converseJSON<{
+    const result = await this.llm.converseJSON<{
       questions: { question: string; reason: string; priority: string }[];
     }>(systemPrompt, prompt);
 
@@ -278,7 +307,7 @@ Respond with JSON:
     const prompt = PromptTemplates.techContextPrompt(mention.term, mention.context);
 
     try {
-      const result = await this.bedrock.converseJSON<{
+      const result = await this.llm.converseJSON<{
         title: string;
         explanation: string;
         awsRelevance: string;
@@ -304,10 +333,10 @@ Respond with JSON:
   private async queueAnswerQuestion(question: string): Promise<void> {
     const context = this.getContext();
     const systemPrompt = PromptTemplates.getSystemPrompt(this.callType);
-    const prompt = PromptTemplates.answerQuestionPrompt(question, context.recentTranscript);
+    const prompt = PromptTemplates.answerQuestionPrompt(question, context.recentTranscript, this.callType);
 
     try {
-      const result = await this.bedrock.converseJSON<{
+      const result = await this.llm.converseJSON<{
         simpleAnswer: string;
         keyDetails: string[];
         avoid: string;
@@ -372,7 +401,7 @@ Respond with JSON:
    */
   destroy(): void {
     this.clearSilenceTimer();
-    this.bedrock.destroy();
+    this.llm.destroy();
   }
 
   // === Silence/Pause Detection ===
@@ -411,7 +440,7 @@ Respond with JSON:
 }`;
 
     try {
-      const result = await this.bedrock.converseJSON<{
+      const result = await this.llm.converseJSON<{
         suggestion: string;
         type: string;
         reason: string;
@@ -456,7 +485,7 @@ Respond with JSON:
 }`;
 
     try {
-      const result = await this.bedrock.converseJSON<{
+      const result = await this.llm.converseJSON<{
         summary: string;
         keyPoints: string[];
         uncovered: string[];

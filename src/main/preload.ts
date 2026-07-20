@@ -37,6 +37,37 @@ contextBridge.exposeInMainWorld('ghostAPI', {
   listSavedCalls: () => ipcRenderer.invoke('list-saved-calls'),
   getSavedCall: (id: string) => ipcRenderer.invoke('get-saved-call', id),
 
+  // === Speaker management ===
+  renameSpeaker: (source: 'you' | 'other', name: string) => ipcRenderer.invoke('rename-speaker', source, name),
+  getSpeakerNames: () => ipcRenderer.invoke('get-speaker-names'),
+
+  // === Cloud Sync ===
+  setSyncToken: (token: string) => ipcRenderer.invoke('set-sync-token', token),
+  getSyncStatus: () => ipcRenderer.invoke('get-sync-status'),
+  forceSync: () => ipcRenderer.invoke('force-sync'),
+  setApiUrl: (url: string) => ipcRenderer.invoke('set-api-url', url),
+  onSyncStatus: (callback: (status: { pending: number; failed: number; total: number }) => void) => {
+    const handler = (_event: any, status: any) => callback(status);
+    ipcRenderer.on('sync-status', handler);
+    return () => ipcRenderer.removeListener('sync-status', handler);
+  },
+
+  // === LLM Provider ===
+  switchLLMProvider: (provider: string, apiKey?: string) => ipcRenderer.invoke('switch-llm-provider', provider, apiKey),
+  getLLMProvider: () => ipcRenderer.invoke('get-llm-provider'),
+
+  // === Auth ===
+  authSignIn: (email: string, password: string) => ipcRenderer.invoke('auth-sign-in', email, password),
+  authSignUp: (email: string, password: string) => ipcRenderer.invoke('auth-sign-up', email, password),
+  authConfirmSignUp: (email: string, code: string) => ipcRenderer.invoke('auth-confirm-sign-up', email, code),
+  authSignOut: () => ipcRenderer.invoke('auth-sign-out'),
+  authGetState: () => ipcRenderer.invoke('auth-get-state'),
+  onAuthStateChange: (callback: (state: { isAuthenticated: boolean; email?: string }) => void) => {
+    const handler = (_event: any, state: any) => callback(state);
+    ipcRenderer.on('auth-state-change', handler);
+    return () => ipcRenderer.removeListener('auth-state-change', handler);
+  },
+
   // === Data export ===
   exportTranscript: (format: 'json' | 'csv') => ipcRenderer.invoke('export-transcript', format),
   exportSuggestions: () => ipcRenderer.invoke('export-suggestions'),

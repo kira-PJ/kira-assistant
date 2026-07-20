@@ -22,6 +22,28 @@ export interface GhostAPI {
   startSession: (config: any) => Promise<{ success: boolean; error?: string }>;
   listSavedCalls: () => Promise<any[]>;
   getSavedCall: (id: string) => Promise<any>;
+  renameSpeaker: (source: 'you' | 'other', name: string) => Promise<void>;
+  getSpeakerNames: () => Promise<Record<string, string>>;
+  copyToClipboard: (text: string) => void;
+
+  // Cloud Sync
+  setSyncToken: (token: string) => Promise<void>;
+  getSyncStatus: () => Promise<{ pending: number; failed: number; total: number }>;
+  forceSync: () => Promise<{ pending: number; failed: number; total: number }>;
+  setApiUrl: (url: string) => Promise<void>;
+  onSyncStatus: (callback: (status: { pending: number; failed: number; total: number }) => void) => () => void;
+
+  // LLM Provider
+  switchLLMProvider: (provider: string, apiKey?: string) => Promise<void>;
+  getLLMProvider: () => Promise<{ provider: string; hasGroqKey: boolean; hasGeminiKey: boolean }>;
+
+  // Auth
+  authSignIn: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  authSignUp: (email: string, password: string) => Promise<{ success: boolean; needsConfirmation?: boolean; error?: string }>;
+  authConfirmSignUp: (email: string, code: string) => Promise<{ success: boolean; error?: string }>;
+  authSignOut: () => Promise<void>;
+  authGetState: () => Promise<{ isAuthenticated: boolean; email?: string }>;
+  onAuthStateChange: (callback: (state: { isAuthenticated: boolean; email?: string }) => void) => () => void;
 
   // First-run
   isFirstRun: () => Promise<boolean>;

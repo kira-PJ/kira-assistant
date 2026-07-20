@@ -166,6 +166,15 @@ export function useSession() {
     );
   }, []);
 
+  const renameSpeaker = useCallback((source: 'you' | 'other', newName: string) => {
+    // Update all existing entries from this speaker retroactively
+    setTranscript((prev) =>
+      prev.map((s) => (s.speaker === source ? { ...s, speakerName: newName } : s))
+    );
+    // Persist to main process for future segments
+    window.ghostAPI?.renameSpeaker?.(source, newName);
+  }, []);
+
   const clearTranscript = useCallback(() => {
     setTranscript([]);
     setSuggestions([]);
@@ -193,6 +202,7 @@ export function useSession() {
     stopCapture,
     changeCallType,
     bookmarkSegment,
+    renameSpeaker,
     clearTranscript,
   };
 }

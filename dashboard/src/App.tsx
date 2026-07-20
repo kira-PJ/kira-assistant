@@ -1,129 +1,379 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 
-// Mock data — will connect to API later
-const mockCalls = [
-  {
-    id: '1',
-    name: 'Discovery: Cloud Migration with Acme Corp',
-    date: '2026-07-19',
-    duration: '32 min',
-    callType: 'discovery',
-    score: 78,
-    participants: 'Moses (CTO), Sarah (Engineer)',
-    summary: 'Customer evaluating cloud migration for 50 .NET apps. SOC2 compliance required. Budget ~$200K. Timeline: Q3 decision.',
-    recommendations: [
-      'Ask about their current monitoring/observability setup',
-      'Clarify who else is involved in the decision (procurement?)',
-      'Send AWS MAP program info — could offset migration costs',
-    ],
-    strengths: ['Good discovery questions about compliance', 'Clear explanation of shared responsibility model'],
-    improvements: ['Talk ratio was 60/40 — listen more', 'Missed opportunity to ask about timeline drivers'],
-    dimensions: [
-      { name: 'Discovery Depth', score: 82 },
-      { name: 'Question Quality', score: 75 },
-      { name: 'Technical Accuracy', score: 90 },
-      { name: 'Engagement', score: 72 },
-      { name: 'Next Steps', score: 85 },
-      { name: 'Talk Ratio', score: 60 },
-      { name: 'Objection Handling', score: 70 },
-    ],
-    transcript: [
-      { speaker: 'other', name: 'Moses', text: "Hi, thanks for making the time. So as I mentioned, we're looking at options for moving our on-prem workloads to the cloud. We have about 50 .NET applications running on Windows Server with SQL Server databases." },
-      { speaker: 'you', name: 'You', text: "Thanks Moses. That's helpful context. Can you tell me more about what's driving this decision now? Has something changed in your infrastructure or business needs?" },
-      { speaker: 'other', name: 'Moses', text: "Yeah, our data center lease is up in Q1 next year, and renewal costs went up 40%. Plus we're growing fast and the current setup can't scale. We also have SOC2 compliance requirements that are getting harder to maintain on-prem." },
-      { speaker: 'you', name: 'You', text: "That makes sense. The lease expiry gives a natural timeline. For the SOC2 piece — AWS has over 140 compliance certifications including SOC2. Most of the heavy lifting shifts to AWS's responsibility. Your team would still own application-level controls." },
-    ],
+// === Theme support ===
+const themes = {
+  dark: {
+    bg: '#0a0a1a',
+    surface: '#111827',
+    border: '#1e293b',
+    text: '#e2e8f0',
+    textDim: '#64748b',
+    textMuted: '#94a3b8',
+    accent: '#16db93',
+    accentHover: '#059669',
+    speakerYou: '#60a5fa',
+    speakerOther: '#16db93',
+    warning: '#f59e0b',
+    danger: '#ef4444',
+    barBg: '#1e293b',
   },
-  {
-    id: '2',
-    name: 'Training: EKS Workshop — Team Bravo',
-    date: '2026-07-18',
-    duration: '55 min',
-    callType: 'training',
-    score: 88,
-    participants: 'Team Bravo (6 people)',
-    summary: 'EKS fundamentals workshop. Covered cluster architecture, pod deployment, and service discovery. Team engaged well, some confusion on networking.',
-    recommendations: [
-      'Follow up with a hands-on lab session for networking concepts',
-      'Share the EKS best practices whitepaper',
-      'Schedule a deeper dive on Fargate vs EC2 node groups',
-    ],
-    strengths: ['Great use of diagrams and analogies', 'Good pace management', 'Engaged all participants'],
-    improvements: ['Networking section needed more examples', 'Could have paused for questions more often'],
-    dimensions: [
-      { name: 'Discovery Depth', score: 70 },
-      { name: 'Question Quality', score: 85 },
-      { name: 'Technical Accuracy', score: 95 },
-      { name: 'Engagement', score: 90 },
-      { name: 'Next Steps', score: 88 },
-      { name: 'Talk Ratio', score: 75 },
-      { name: 'Objection Handling', score: 80 },
-    ],
-    transcript: [],
+  light: {
+    bg: '#f8fafc',
+    surface: '#ffffff',
+    border: '#e2e8f0',
+    text: '#1e293b',
+    textDim: '#64748b',
+    textMuted: '#475569',
+    accent: '#059669',
+    accentHover: '#047857',
+    speakerYou: '#2563eb',
+    speakerOther: '#059669',
+    warning: '#d97706',
+    danger: '#dc2626',
+    barBg: '#e2e8f0',
   },
-];
+};
 
-type View = 'list' | 'detail';
+type ThemeMode = 'dark' | 'light';
+
+// === API Config ===
+const API_URL = 'https://jp6ir67fxb.execute-api.us-east-1.amazonaws.com/prod';
+const COGNITO_CLIENT_ID = '6utrgprn6cvng5cr4ei93okv5s';
+const COGNITO_REGION = 'us-east-1';
+const COGNITO_USER_POOL_ID = 'us-east-1_WPUraFlI4';
+
+// === Types ===
+interface CallMeta {
+  callId: string;
+  callName: string;
+  callDate: string;
+  durationMs: number;
+  callType: string;
+  participants: string;
+  segmentCount: number;
+  myRole: string;
+  score: number;
+  context?: string;
+  talkRatio?: { you: number; other: number };
+}
+
+interface CallFull extends CallMeta {
+  transcript: { speaker: string; speakerName: string; text: string; timestamp: number; isPartial?: boolean }[];
+  summary?: any;
+  actionItems?: any[];
+}
+
+// === Auth helpers ===
+async function cognitoSignIn(email: string, password: string): Promise<{ idToken: string; refreshToken: string } | null> {
+  const url = `https://cognito-idp.${COGNITO_REGION}.amazonaws.com/`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-amz-json-1.1',
+      'X-Amz-Target': 'AWSCognitoIdentityProviderService.InitiateAuth',
+    },
+    body: JSON.stringify({
+      ClientId: COGNITO_CLIENT_ID,
+      AuthFlow: 'USER_PASSWORD_AUTH',
+      AuthParameters: { USERNAME: email, PASSWORD: password },
+    }),
+  });
+  const data = await res.json();
+  if (data.AuthenticationResult) {
+    return {
+      idToken: data.AuthenticationResult.IdToken,
+      refreshToken: data.AuthenticationResult.RefreshToken,
+    };
+  }
+  return null;
+}
+
+async function cognitoRefresh(refreshToken: string): Promise<string | null> {
+  const url = `https://cognito-idp.${COGNITO_REGION}.amazonaws.com/`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-amz-json-1.1',
+      'X-Amz-Target': 'AWSCognitoIdentityProviderService.InitiateAuth',
+    },
+    body: JSON.stringify({
+      ClientId: COGNITO_CLIENT_ID,
+      AuthFlow: 'REFRESH_TOKEN_AUTH',
+      AuthParameters: { REFRESH_TOKEN: refreshToken },
+    }),
+  });
+  const data = await res.json();
+  return data.AuthenticationResult?.IdToken ?? null;
+}
+
+// === API client ===
+async function apiGet(path: string, token: string): Promise<any> {
+  const res = await fetch(`${API_URL}${path}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error(`API error: ${res.status}`);
+  return res.json();
+}
+
+// === App ===
+type View = 'login' | 'list' | 'detail';
 
 const App: React.FC = () => {
-  const [view, setView] = useState<View>('list');
-  const [selectedCall, setSelectedCall] = useState<typeof mockCalls[0] | null>(null);
+  const [view, setView] = useState<View>('login');
+  const [calls, setCalls] = useState<CallMeta[]>([]);
+  const [selectedCall, setSelectedCall] = useState<CallFull | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [token, setToken] = useState<string | null>(null);
+  const [refreshToken, setRefreshToken] = useState<string | null>(null);
+  const [email, setEmail] = useState('');
+  const [themeMode, setThemeMode] = useState<ThemeMode>(() => {
+    try { return (localStorage.getItem('kira-theme') as ThemeMode) ?? 'dark'; } catch { return 'dark'; }
+  });
 
-  const openCall = (call: typeof mockCalls[0]) => {
-    setSelectedCall(call);
-    setView('detail');
+  const t = themes[themeMode];
+
+  const toggleTheme = () => {
+    const next = themeMode === 'dark' ? 'light' : 'dark';
+    setThemeMode(next);
+    try { localStorage.setItem('kira-theme', next); } catch {}
+  };
+
+  // Check for stored session
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('kira-session');
+      if (stored) {
+        const session = JSON.parse(stored);
+        if (session.token && session.refreshToken) {
+          setToken(session.token);
+          setRefreshToken(session.refreshToken);
+          setEmail(session.email ?? '');
+          setView('list');
+        }
+      }
+    } catch {}
+  }, []);
+
+  // Load calls when authenticated
+  useEffect(() => {
+    if (token && view === 'list') {
+      loadCalls();
+    }
+  }, [token, view]);
+
+  const loadCalls = useCallback(async () => {
+    if (!token) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await apiGet('/calls', token);
+      setCalls(data.calls ?? []);
+    } catch (err: any) {
+      // Try refreshing token
+      if (refreshToken) {
+        const newToken = await cognitoRefresh(refreshToken);
+        if (newToken) {
+          setToken(newToken);
+          localStorage.setItem('kira-session', JSON.stringify({ token: newToken, refreshToken, email }));
+          try {
+            const data = await apiGet('/calls', newToken);
+            setCalls(data.calls ?? []);
+          } catch (e2: any) {
+            setError(e2.message);
+          }
+        } else {
+          setView('login');
+        }
+      } else {
+        setError(err.message);
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [token, refreshToken, email]);
+
+  const openCall = async (callId: string) => {
+    if (!token) return;
+    setLoading(true);
+    try {
+      const data = await apiGet(`/calls/${callId}`, token);
+      setSelectedCall(data as CallFull);
+      setView('detail');
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleLogin = async (loginEmail: string, password: string) => {
+    setError(null);
+    setLoading(true);
+    try {
+      const result = await cognitoSignIn(loginEmail, password);
+      if (result) {
+        setToken(result.idToken);
+        setRefreshToken(result.refreshToken);
+        setEmail(loginEmail);
+        localStorage.setItem('kira-session', JSON.stringify({ token: result.idToken, refreshToken: result.refreshToken, email: loginEmail }));
+        setView('list');
+      } else {
+        setError('Sign in failed. Check your credentials.');
+      }
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleLogout = () => {
+    setToken(null);
+    setRefreshToken(null);
+    setCalls([]);
+    setSelectedCall(null);
+    localStorage.removeItem('kira-session');
+    setView('login');
   };
 
   return (
-    <div style={{ minHeight: '100vh', background: '#0a0a1a', color: '#e2e8f0' }}>
+    <div style={{ minHeight: '100vh', background: t.bg, color: t.text, transition: 'background 0.2s, color 0.2s' }}>
       {/* Header */}
-      <header style={{ borderBottom: '1px solid #1e293b', padding: '16px 32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <header style={{ borderBottom: `1px solid ${t.border}`, padding: '16px 32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <span style={{ color: '#16db93', fontSize: '20px', fontWeight: 'bold' }}>✦</span>
+          <span style={{ color: t.accent, fontSize: '20px', fontWeight: 'bold' }}>✦</span>
           <h1 style={{ fontSize: '18px', fontWeight: 600 }}>K.I.R.A.</h1>
-          <span style={{ fontSize: '12px', color: '#64748b' }}>Knowledge, Insights & Response Assistant</span>
+          <span style={{ fontSize: '12px', color: t.textDim }}>Knowledge, Insights & Response Assistant</span>
         </div>
-        {view === 'detail' && (
-          <button onClick={() => setView('list')} style={{ fontSize: '13px', color: '#16db93', background: 'none', border: 'none', cursor: 'pointer' }}>
-            ← All Calls
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          {view === 'detail' && (
+            <button onClick={() => { setSelectedCall(null); setView('list'); }} style={{ fontSize: '13px', color: t.accent, background: 'none', border: 'none', cursor: 'pointer' }}>
+              ← All Calls
+            </button>
+          )}
+          {token && (
+            <>
+              <span style={{ fontSize: '11px', color: t.textDim }}>{email}</span>
+              <button onClick={handleLogout} style={{ fontSize: '11px', color: t.textDim, background: 'none', border: `1px solid ${t.border}`, borderRadius: '4px', padding: '3px 8px', cursor: 'pointer' }}>
+                Logout
+              </button>
+            </>
+          )}
+          <button
+            onClick={toggleTheme}
+            style={{ fontSize: '16px', background: 'none', border: 'none', cursor: 'pointer', padding: '4px 8px', borderRadius: '6px' }}
+            title={`Switch to ${themeMode === 'dark' ? 'light' : 'dark'} mode`}
+          >
+            {themeMode === 'dark' ? '☀️' : '🌙'}
           </button>
-        )}
+        </div>
       </header>
 
       <main style={{ maxWidth: '900px', margin: '0 auto', padding: '32px' }}>
-        {view === 'list' ? <CallList calls={mockCalls} onOpen={openCall} /> : selectedCall && <CallDetail call={selectedCall} />}
+        {error && (
+          <div style={{ marginBottom: '16px', padding: '12px', background: `${t.danger}15`, border: `1px solid ${t.danger}40`, borderRadius: '8px', fontSize: '13px', color: t.danger }}>
+            {error}
+          </div>
+        )}
+
+        {view === 'login' && <LoginForm onLogin={handleLogin} loading={loading} theme={t} />}
+        {view === 'list' && <CallList calls={calls} loading={loading} onOpen={openCall} onRefresh={loadCalls} theme={t} />}
+        {view === 'detail' && selectedCall && <CallDetail call={selectedCall} theme={t} />}
       </main>
     </div>
   );
 };
 
+// === Login Form ===
+const LoginForm: React.FC<{ onLogin: (email: string, password: string) => void; loading: boolean; theme: typeof themes.dark }> = ({ onLogin, loading, theme: t }) => {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onLogin(email, password);
+  };
+
+  return (
+    <div style={{ maxWidth: '320px', margin: '80px auto', textAlign: 'center' }}>
+      <div style={{ marginBottom: '32px' }}>
+        <span style={{ color: t.accent, fontSize: '36px', fontWeight: 'bold' }}>✦</span>
+        <h2 style={{ fontSize: '20px', fontWeight: 600, marginTop: '12px' }}>Sign In to K.I.R.A.</h2>
+        <p style={{ fontSize: '12px', color: t.textDim, marginTop: '8px' }}>View your call history and analytics</p>
+      </div>
+      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        <input
+          type="email"
+          value={email}
+          onChange={e => setEmail(e.target.value)}
+          placeholder="Email"
+          required
+          style={{ padding: '10px 14px', background: t.surface, border: `1px solid ${t.border}`, borderRadius: '8px', color: t.text, fontSize: '13px', outline: 'none' }}
+        />
+        <input
+          type="password"
+          value={password}
+          onChange={e => setPassword(e.target.value)}
+          placeholder="Password"
+          required
+          style={{ padding: '10px 14px', background: t.surface, border: `1px solid ${t.border}`, borderRadius: '8px', color: t.text, fontSize: '13px', outline: 'none' }}
+        />
+        <button
+          type="submit"
+          disabled={loading}
+          style={{ padding: '12px', background: t.accent, color: '#fff', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: 600, cursor: 'pointer', opacity: loading ? 0.6 : 1 }}
+        >
+          {loading ? 'Signing in...' : 'Sign In'}
+        </button>
+      </form>
+    </div>
+  );
+};
+
 // === Call List ===
-const CallList: React.FC<{ calls: typeof mockCalls; onOpen: (c: typeof mockCalls[0]) => void }> = ({ calls, onOpen }) => (
+const CallList: React.FC<{ calls: CallMeta[]; loading: boolean; onOpen: (id: string) => void; onRefresh: () => void; theme: typeof themes.dark }> = ({ calls, loading, onOpen, onRefresh, theme: t }) => (
   <div>
-    <h2 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '24px' }}>Recent Calls</h2>
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+      <h2 style={{ fontSize: '20px', fontWeight: 600 }}>Your Calls</h2>
+      <button onClick={onRefresh} style={{ fontSize: '12px', color: t.textDim, background: 'none', border: `1px solid ${t.border}`, borderRadius: '6px', padding: '6px 12px', cursor: 'pointer' }}>
+        {loading ? 'Loading...' : 'Refresh'}
+      </button>
+    </div>
+
+    {calls.length === 0 && !loading && (
+      <div style={{ textAlign: 'center', padding: '60px 0', color: t.textDim }}>
+        <p style={{ fontSize: '32px', marginBottom: '12px' }}>📂</p>
+        <p style={{ fontSize: '14px' }}>No calls synced yet</p>
+        <p style={{ fontSize: '12px', marginTop: '8px' }}>Start a capture in the K.I.R.A. app and your calls will appear here</p>
+      </div>
+    )}
+
     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
       {calls.map((call) => (
         <div
-          key={call.id}
-          onClick={() => onOpen(call)}
-          style={{ padding: '20px', background: '#111827', border: '1px solid #1e293b', borderRadius: '12px', cursor: 'pointer', transition: 'border-color 0.2s' }}
-          onMouseEnter={e => (e.currentTarget.style.borderColor = '#16db93')}
-          onMouseLeave={e => (e.currentTarget.style.borderColor = '#1e293b')}
+          key={call.callId}
+          onClick={() => onOpen(call.callId)}
+          style={{ padding: '20px', background: t.surface, border: `1px solid ${t.border}`, borderRadius: '12px', cursor: 'pointer', transition: 'border-color 0.2s' }}
+          onMouseEnter={e => (e.currentTarget.style.borderColor = t.accent)}
+          onMouseLeave={e => (e.currentTarget.style.borderColor = t.border)}
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <div>
-              <h3 style={{ fontSize: '15px', fontWeight: 500, marginBottom: '6px' }}>{call.name}</h3>
-              <div style={{ display: 'flex', gap: '16px', fontSize: '12px', color: '#64748b' }}>
-                <span>{call.date}</span>
-                <span>{call.duration}</span>
+              <h3 style={{ fontSize: '15px', fontWeight: 500, marginBottom: '6px' }}>{call.callName}</h3>
+              <div style={{ display: 'flex', gap: '16px', fontSize: '12px', color: t.textDim }}>
+                <span>{new Date(call.callDate).toLocaleDateString()}</span>
+                <span>{Math.round(call.durationMs / 60000)} min</span>
                 <span style={{ textTransform: 'capitalize' }}>{call.callType}</span>
-                <span>{call.participants}</span>
+                {call.participants && <span>{call.participants}</span>}
+                <span>{call.segmentCount} segments</span>
               </div>
-              <p style={{ fontSize: '13px', color: '#94a3b8', marginTop: '8px', lineHeight: '1.5' }}>{call.summary}</p>
             </div>
-            <div style={{ fontSize: '32px', fontWeight: 700, color: call.score >= 80 ? '#16db93' : call.score >= 60 ? '#f59e0b' : '#ef4444', minWidth: '50px', textAlign: 'right' }}>
-              {call.score}
-            </div>
+            {call.score > 0 && (
+              <div style={{ fontSize: '28px', fontWeight: 700, color: call.score >= 80 ? t.accent : call.score >= 60 ? t.warning : t.danger, minWidth: '40px', textAlign: 'right' }}>
+                {call.score}
+              </div>
+            )}
           </div>
         </div>
       ))}
@@ -132,85 +382,70 @@ const CallList: React.FC<{ calls: typeof mockCalls; onOpen: (c: typeof mockCalls
 );
 
 // === Call Detail ===
-const CallDetail: React.FC<{ call: typeof mockCalls[0] }> = ({ call }) => (
-  <div>
-    {/* Header */}
-    <div style={{ marginBottom: '32px' }}>
-      <h2 style={{ fontSize: '22px', fontWeight: 600, marginBottom: '8px' }}>{call.name}</h2>
-      <div style={{ display: 'flex', gap: '16px', fontSize: '13px', color: '#64748b' }}>
-        <span>{call.date}</span>
-        <span>{call.duration}</span>
-        <span style={{ textTransform: 'capitalize' }}>{call.callType}</span>
-        <span>{call.participants}</span>
-      </div>
-    </div>
+const CallDetail: React.FC<{ call: CallFull; theme: typeof themes.dark }> = ({ call, theme: t }) => {
+  const finals = call.transcript?.filter(s => !s.isPartial) ?? [];
 
-    {/* Score + Dimensions */}
-    <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: '24px', marginBottom: '32px', background: '#111827', padding: '24px', borderRadius: '12px', border: '1px solid #1e293b' }}>
-      <div style={{ textAlign: 'center' }}>
-        <div style={{ fontSize: '48px', fontWeight: 700, color: '#16db93' }}>{call.score}</div>
-        <div style={{ fontSize: '11px', color: '#64748b', marginTop: '4px' }}>Overall Score</div>
-      </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-        {call.dimensions.map((dim) => (
-          <div key={dim.name} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <span style={{ fontSize: '11px', color: '#94a3b8', width: '130px', flexShrink: 0 }}>{dim.name}</span>
-            <div style={{ flex: 1, height: '6px', background: '#1e293b', borderRadius: '3px', overflow: 'hidden' }}>
-              <div style={{ width: `${dim.score}%`, height: '100%', background: dim.score >= 80 ? '#16db93' : dim.score >= 60 ? '#f59e0b' : '#ef4444', borderRadius: '3px' }} />
-            </div>
-            <span style={{ fontSize: '11px', color: '#e2e8f0', width: '28px', textAlign: 'right' }}>{dim.score}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-
-    {/* Recommendations */}
-    <Section title="📋 Recommendations" color="#16db93">
-      {call.recommendations.map((rec, i) => (
-        <li key={i} style={{ fontSize: '13px', color: '#e2e8f0', marginBottom: '8px', paddingLeft: '8px' }}>{rec}</li>
-      ))}
-    </Section>
-
-    {/* Strengths & Improvements */}
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '32px' }}>
-      <div style={{ background: '#111827', padding: '20px', borderRadius: '12px', border: '1px solid #1e293b' }}>
-        <h4 style={{ fontSize: '13px', fontWeight: 600, color: '#16db93', marginBottom: '12px' }}>✓ Strengths</h4>
-        {call.strengths.map((s, i) => (
-          <p key={i} style={{ fontSize: '12px', color: '#94a3b8', marginBottom: '6px', lineHeight: '1.5' }}>• {s}</p>
-        ))}
-      </div>
-      <div style={{ background: '#111827', padding: '20px', borderRadius: '12px', border: '1px solid #1e293b' }}>
-        <h4 style={{ fontSize: '13px', fontWeight: 600, color: '#f59e0b', marginBottom: '12px' }}>→ Improve</h4>
-        {call.improvements.map((s, i) => (
-          <p key={i} style={{ fontSize: '12px', color: '#94a3b8', marginBottom: '6px', lineHeight: '1.5' }}>• {s}</p>
-        ))}
-      </div>
-    </div>
-
-    {/* Transcript */}
-    {call.transcript.length > 0 && (
-      <Section title="💬 Transcript" color="#64748b">
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          {call.transcript.map((seg, i) => (
-            <div key={i}>
-              <span style={{ fontSize: '11px', fontWeight: 600, color: seg.speaker === 'you' ? '#60a5fa' : '#16db93' }}>
-                {seg.name}
-              </span>
-              <p style={{ fontSize: '13px', color: '#cbd5e1', lineHeight: '1.6', marginTop: '4px' }}>{seg.text}</p>
-            </div>
-          ))}
+  return (
+    <div>
+      <div style={{ marginBottom: '24px' }}>
+        <h2 style={{ fontSize: '22px', fontWeight: 600, marginBottom: '8px' }}>{call.callName}</h2>
+        <div style={{ display: 'flex', gap: '16px', fontSize: '13px', color: t.textDim }}>
+          <span>{new Date(call.callDate).toLocaleDateString()}</span>
+          <span>{Math.round(call.durationMs / 60000)} min</span>
+          <span style={{ textTransform: 'capitalize' }}>{call.callType}</span>
+          {call.participants && <span>{call.participants}</span>}
         </div>
-      </Section>
-    )}
-  </div>
-);
+      </div>
 
-// === Section Helper ===
-const Section: React.FC<{ title: string; color: string; children: React.ReactNode }> = ({ title, color, children }) => (
-  <div style={{ marginBottom: '32px', background: '#111827', padding: '20px', borderRadius: '12px', border: '1px solid #1e293b' }}>
-    <h4 style={{ fontSize: '14px', fontWeight: 600, color, marginBottom: '16px' }}>{title}</h4>
-    <ul style={{ listStyle: 'none', padding: 0 }}>{children}</ul>
-  </div>
-);
+      {/* Talk Ratio */}
+      {call.talkRatio && (
+        <div style={{ marginBottom: '24px', background: t.surface, padding: '16px', borderRadius: '12px', border: `1px solid ${t.border}` }}>
+          <h4 style={{ fontSize: '12px', fontWeight: 600, color: t.textDim, marginBottom: '10px' }}>Talk Ratio</h4>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <span style={{ fontSize: '12px', color: t.speakerYou, width: '40px' }}>You {call.talkRatio.you}%</span>
+            <div style={{ flex: 1, height: '8px', background: t.barBg, borderRadius: '4px', overflow: 'hidden', display: 'flex' }}>
+              <div style={{ width: `${call.talkRatio.you}%`, background: t.speakerYou, borderRadius: '4px 0 0 4px' }} />
+              <div style={{ width: `${call.talkRatio.other}%`, background: t.speakerOther, borderRadius: '0 4px 4px 0' }} />
+            </div>
+            <span style={{ fontSize: '12px', color: t.speakerOther, width: '50px', textAlign: 'right' }}>Other {call.talkRatio.other}%</span>
+          </div>
+        </div>
+      )}
+
+      {/* Context */}
+      {call.context && (
+        <div style={{ marginBottom: '24px', background: t.surface, padding: '16px', borderRadius: '12px', border: `1px solid ${t.border}` }}>
+          <h4 style={{ fontSize: '12px', fontWeight: 600, color: t.textDim, marginBottom: '8px' }}>Meeting Context</h4>
+          <p style={{ fontSize: '13px', color: t.textMuted, lineHeight: '1.6' }}>{call.context}</p>
+        </div>
+      )}
+
+      {/* Transcript */}
+      {finals.length > 0 && (
+        <div style={{ background: t.surface, padding: '20px', borderRadius: '12px', border: `1px solid ${t.border}` }}>
+          <h4 style={{ fontSize: '13px', fontWeight: 600, color: t.textDim, marginBottom: '16px' }}>
+            Transcript ({finals.length} segments)
+          </h4>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', maxHeight: '500px', overflowY: 'auto' }}>
+            {finals.map((seg, i) => (
+              <div key={i}>
+                <span style={{ fontSize: '11px', fontWeight: 600, color: seg.speaker === 'you' ? t.speakerYou : t.speakerOther }}>
+                  {seg.speakerName}
+                </span>
+                <p style={{ fontSize: '13px', color: t.textMuted, lineHeight: '1.6', marginTop: '2px' }}>{seg.text}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {finals.length === 0 && (
+        <div style={{ textAlign: 'center', padding: '40px', color: t.textDim }}>
+          <p style={{ fontSize: '13px' }}>No transcript data available for this call</p>
+        </div>
+      )}
+    </div>
+  );
+};
 
 export default App;

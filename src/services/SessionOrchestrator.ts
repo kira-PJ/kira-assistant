@@ -4,7 +4,10 @@ import { TranscriptionService, TranscriptSegment } from './transcription';
 import { SpeakerIdentifier } from './transcription/SpeakerIdentifier';
 import { CoachingService, CoachingSuggestion, SentimentAnalysis, TalkRatioData } from './coaching';
 import { CallType } from './coaching/types';
+import { LLMProvider } from './coaching/LLMClient';
 import { LocalStorage, SavedCall } from './storage';
+import { SyncService } from './cloud';
+import { PostCallReport } from './postcall/types';
 
 export type SessionState = 'idle' | 'initializing' | 'active' | 'error';
 
@@ -24,6 +27,7 @@ export class SessionOrchestrator extends EventEmitter {
   private coaching: CoachingService;
   private speakerIdentifier: SpeakerIdentifier;
   private storage: LocalStorage;
+  private sync: SyncService;
   private state: SessionState = 'idle';
   private callStartTime = 0;
   private sessionConfig: { meetingName?: string; meetingContext?: string; callType?: string; myRole?: string; participants?: string } = {};
@@ -34,6 +38,10 @@ export class SessionOrchestrator extends EventEmitter {
     awsRegion?: string;
     bedrockModelId?: string;
     whisperModelPath?: string;
+    apiUrl?: string;
+    llmProvider?: LLMProvider;
+    groqApiKey?: string;
+    geminiApiKey?: string;
   } = {}) {
     super();
 
@@ -52,11 +60,30 @@ export class SessionOrchestrator extends EventEmitter {
       callType: config.callType ?? 'discovery',
       region: config.awsRegion,
       modelId: config.bedrockModelId,
+      llmProvider: config.llmProvider,
+      groqApiKey: config.groqApiKey,
+      geminiApiKey: config.geminiApiKey,
     });
 
     this.speakerIdentifier = new SpeakerIdentifier();
     this.storage = new LocalStorage();
     this.storage.initialize();
+
+    // Cloud sync — queues completed calls for upload
+    this.sync = new SyncService(config.apiUrl);
+    this.sync.initialize().catch(err => {
+      console.error('[Orchestrator] SyncService init failed:', err);
+    });
+
+    // Forward sync events
+    this.sync.on('synced', (item) => {
+      console.log(`[Orchestrator] Synced: ${item.id}`);
+      this.emit('sync-status', this.sync.getQueueStatus());
+    });
+    this.sync.on('sync-error', ({ item, error }) => {
+      console.error(`[Orchestrator] Sync failed for ${item.id}:`, error);
+      this.emit('sync-status', this.sync.getQueueStatus());
+    });
 
     this.wireEvents();
   }
@@ -102,6 +129,15 @@ export class SessionOrchestrator extends EventEmitter {
 
   setSessionConfig(config: { meetingName?: string; meetingContext?: string; callType?: string; myRole?: string; participants?: string }): void {
     this.sessionConfig = config;
+
+    // Set call type on speaker identifier for proper default labels
+    if (config.callType) {
+      this.speakerIdentifier.setCallType(
+        config.callType,
+        (config.myRole as 'leading' | 'attending') ?? 'leading'
+      );
+    }
+
     // If participants provided, set the first one as the "other" speaker name
     if (config.participants) {
       const firstName = config.participants.split(/[,;]/)[0]?.trim().split(/\s/)[0];
@@ -131,6 +167,7 @@ export class SessionOrchestrator extends EventEmitter {
     this.audio.stop();
     this.transcription.shutdown();
     this.coaching.destroy();
+    this.sync.shutdown();
   }
 
   private wireEvents(): void {
@@ -204,6 +241,39 @@ export class SessionOrchestrator extends EventEmitter {
     try {
       await this.storage.saveCall(call);
       console.log(`[Orchestrator] Call saved: ${call.name} (${transcript.length} segments)`);
+
+      // Queue for cloud sync (non-blocking)
+      const talkRatio = this.coaching.getTalkRatio();
+      const report: PostCallReport = {
+        summary: {
+          id: call.id,
+          title: call.name,
+          date: this.callStartTime,
+          durationMs: call.durationMs,
+          callType: call.callType,
+          participants: call.participants ? call.participants.split(/[,;]/).map(p => p.trim()) : [],
+          topicsCovered: [],
+          keyDecisions: [],
+          overallSentiment: 'neutral',
+          synopsis: '',
+        },
+        score: {
+          callId: call.id,
+          overall: 0,
+          dimensions: [],
+          strengths: [],
+          improvements: [],
+          timestamp: Date.now(),
+        },
+        actionItems: [],
+        followUpEmail: { subject: '', body: '', actionItems: [], nextSteps: [] },
+        talkRatio: { you: talkRatio.you, other: talkRatio.other },
+        totalWords: { you: talkRatio.yourWordCount ?? 0, other: talkRatio.otherWordCount ?? 0 },
+      };
+
+      this.sync.queueCallReport(report).catch(err => {
+        console.error('[Orchestrator] Failed to queue sync:', err);
+      });
     } catch (err) {
       console.error('[Orchestrator] Failed to save call:', err);
     }
@@ -221,5 +291,49 @@ export class SessionOrchestrator extends EventEmitter {
    */
   async getSavedCall(id: string): Promise<SavedCall | null> {
     return this.storage.getCall(id);
+  }
+
+  /**
+   * Rename a speaker label mid-session (from UI)
+   */
+  renameSpeaker(source: 'you' | 'other', name: string): void {
+    this.speakerIdentifier.renameSpeaker(source, name);
+  }
+
+  /**
+   * Get current speaker names
+   */
+  getSpeakerNames(): Record<string, string> {
+    return this.speakerIdentifier.getNames();
+  }
+
+  // === Cloud Sync ===
+
+  /**
+   * Switch LLM provider at runtime
+   */
+  switchLLMProvider(provider: LLMProvider, apiKey?: string): void {
+    this.coaching.switchProvider(provider, apiKey);
+  }
+
+  /**
+   * Set the auth token for cloud sync (from Cognito)
+   */
+  setSyncAuthToken(token: string): void {
+    this.sync.setAuthToken(token);
+  }
+
+  /**
+   * Get current sync queue status
+   */
+  getSyncStatus(): { pending: number; failed: number; total: number } {
+    return this.sync.getQueueStatus();
+  }
+
+  /**
+   * Force process the sync queue now
+   */
+  async forceSyncNow(): Promise<void> {
+    await this.sync.processQueue();
   }
 }

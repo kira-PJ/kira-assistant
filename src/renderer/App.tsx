@@ -10,8 +10,12 @@ import HistoryPanel from './components/panels/HistoryPanel';
 import CollapsedStrip from './components/CollapsedStrip';
 import SetupWizard from './components/SetupWizard';
 import PreCallPanel, { PreCallConfig } from './components/PreCallPanel';
+import QuestionPopup from './components/QuestionPopup';
+import LoginScreen from './components/LoginScreen';
+import SettingsModal from './components/SettingsModal';
 import { useSession } from './hooks/useSession';
-import { GhostAPI } from './types';
+import { useTheme } from './hooks/useTheme';
+import { AISuggestion, GhostAPI } from './types';
 
 declare global {
   interface Window {
@@ -26,8 +30,41 @@ const App: React.FC = () => {
   const [collapsed, setCollapsed] = useState(false);
   const [showSetup, setShowSetup] = useState(false);
   const [showPreCall, setShowPreCall] = useState(false);
+  const [questionPopup, setQuestionPopup] = useState<AISuggestion | null>(null);
+  const [showLogin, setShowLogin] = useState(false);
+  const [authChecked, setAuthChecked] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
 
   const session = useSession();
+  const { theme, toggleTheme } = useTheme();
+
+  // Show popup when a question-answer suggestion arrives
+  useEffect(() => {
+    const latest = session.suggestions[0];
+    if (latest && latest.type === 'answer' && latest.title === 'Customer asked') {
+      setQuestionPopup(latest);
+    }
+  }, [session.suggestions]);
+
+  // Check auth state on mount
+  useEffect(() => {
+    window.ghostAPI?.authGetState?.().then((state) => {
+      if (!state?.isAuthenticated) {
+        setShowLogin(true);
+      }
+      setAuthChecked(true);
+    }).catch(() => {
+      setAuthChecked(true);
+    });
+
+    // Listen for auth expiry
+    const cleanup = window.ghostAPI?.onAuthStateChange?.((state) => {
+      if (!state.isAuthenticated) {
+        setShowLogin(true);
+      }
+    });
+    return () => cleanup?.();
+  }, []);
 
   // Check first-run
   useEffect(() => {
@@ -60,10 +97,12 @@ const App: React.FC = () => {
   useEffect(() => {
     const cleanupCollapse = window.ghostAPI?.onToggleCollapse(toggleCollapse);
     const cleanupCapture = window.ghostAPI?.onToggleCapture(handleToggleCapture);
+    const cleanupSettings = window.ghostAPI?.onOpenSettings(() => setShowSettings(true));
 
     return () => {
       cleanupCollapse?.();
       cleanupCapture?.();
+      cleanupSettings?.();
     };
   }, [toggleCollapse, handleToggleCapture]);
 
@@ -73,6 +112,10 @@ const App: React.FC = () => {
         onComplete={() => setShowSetup(false)}
       />
     );
+  }
+
+  if (showLogin && authChecked) {
+    return <LoginScreen onAuthenticated={() => setShowLogin(false)} />;
   }
 
   if (collapsed) {
@@ -86,9 +129,12 @@ const App: React.FC = () => {
           isCapturing={session.isCapturing}
           sessionState={session.sessionState}
           callType={session.callType}
+          theme={theme}
           onToggleCapture={handleToggleCapture}
           onCollapse={toggleCollapse}
           onCallTypeChange={session.changeCallType}
+          onToggleTheme={toggleTheme}
+          onOpenSettings={() => setShowSettings(true)}
         />
         <PreCallPanel
           onStart={handlePreCallStart}
@@ -105,6 +151,7 @@ const App: React.FC = () => {
           <TranscriptPanel
             entries={session.transcript}
             onBookmark={session.bookmarkSegment}
+            onRenameSpeaker={session.renameSpeaker}
           />
         );
       case 'suggestions':
@@ -134,9 +181,12 @@ const App: React.FC = () => {
         isCapturing={session.isCapturing}
         sessionState={session.sessionState}
         callType={session.callType}
+        theme={theme}
         onToggleCapture={handleToggleCapture}
         onCollapse={toggleCollapse}
         onCallTypeChange={session.changeCallType}
+        onToggleTheme={toggleTheme}
+        onOpenSettings={() => setShowSettings(true)}
       />
       <TabBar activeTab={activeTab} onTabChange={setActiveTab} />
       {session.error && (
@@ -145,6 +195,14 @@ const App: React.FC = () => {
         </div>
       )}
       <main className="flex-1 overflow-hidden">{renderPanel()}</main>
+      <QuestionPopup
+        suggestion={questionPopup}
+        onDismiss={() => setQuestionPopup(null)}
+      />
+      <SettingsModal
+        isOpen={showSettings}
+        onClose={() => setShowSettings(false)}
+      />
     </div>
   );
 };

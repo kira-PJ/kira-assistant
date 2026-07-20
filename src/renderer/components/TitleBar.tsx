@@ -1,13 +1,17 @@
 import React, { useState } from 'react';
 import { CallType, SessionState } from '../types';
+import { Theme } from '../hooks/useTheme';
 
 interface TitleBarProps {
   isCapturing: boolean;
   sessionState: SessionState;
   callType: CallType;
+  theme: Theme;
   onToggleCapture: () => void;
   onCollapse: () => void;
   onCallTypeChange: (type: CallType) => void;
+  onToggleTheme: () => void;
+  onOpenSettings?: () => void;
 }
 
 const callTypes: { id: CallType; label: string }[] = [
@@ -23,9 +27,12 @@ const TitleBar: React.FC<TitleBarProps> = ({
   isCapturing,
   sessionState,
   callType,
+  theme,
   onToggleCapture,
   onCollapse,
   onCallTypeChange,
+  onToggleTheme,
+  onOpenSettings,
 }) => {
   const [opacity, setOpacity] = useState(95);
 
@@ -81,6 +88,24 @@ const TitleBar: React.FC<TitleBarProps> = ({
           className="w-12 h-1 accent-ghost-accent cursor-pointer"
           title={`Opacity: ${opacity}%`}
         />
+
+        {/* Theme toggle */}
+        <button
+          onClick={onToggleTheme}
+          className="text-ghost-text-dim hover:text-ghost-text text-sm px-1"
+          title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+        >
+          {theme === 'dark' ? '☀️' : '🌙'}
+        </button>
+
+        {/* Settings */}
+        <button
+          onClick={onOpenSettings}
+          className="text-ghost-text-dim hover:text-ghost-text text-sm px-1"
+          title="Settings"
+        >
+          ⚙️
+        </button>
 
         {/* Window controls */}
         <button

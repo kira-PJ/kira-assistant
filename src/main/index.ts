@@ -7,10 +7,12 @@ import { ConfigStore } from './config';
 import { initAutoUpdater } from './updater';
 import { applyStartupOptimizations, setupIdleDetection, startMemoryMonitor } from './performance';
 import { SessionOrchestrator } from '../services/SessionOrchestrator';
+import { CognitoAuthService } from '../services/auth';
 import { Logger } from '../services/Logger';
 
 let mainWindow: BrowserWindow | null = null;
 let orchestrator: SessionOrchestrator | null = null;
+let authService: CognitoAuthService | null = null;
 let cleanupIdle: (() => void) | null = null;
 let cleanupMemory: (() => void) | null = null;
 const logger = Logger.getInstance();
@@ -46,6 +48,10 @@ function createOrchestrator(): SessionOrchestrator {
     awsRegion: (config.get('awsRegion') as string) ?? 'us-east-1',
     bedrockModelId: (config.get('bedrockModelId') as string) ?? undefined,
     whisperModelPath: (config.get('whisperModelPath') as string) ?? 'ggml-small.en.bin',
+    apiUrl: (config.get('apiUrl') as string) ?? process.env.KIRA_API_URL ?? '',
+    llmProvider: (config.get('llmProvider') as any) ?? 'bedrock',
+    groqApiKey: (config.get('groqApiKey') as string) ?? process.env.GROQ_API_KEY ?? '',
+    geminiApiKey: (config.get('geminiApiKey') as string) ?? process.env.GEMINI_API_KEY ?? '',
   });
 
   // Forward events to renderer via IPC
@@ -82,6 +88,10 @@ function createOrchestrator(): SessionOrchestrator {
     mainWindow?.webContents.send('session-error', err.message);
   });
 
+  orch.on('sync-status', (status) => {
+    mainWindow?.webContents.send('sync-status', status);
+  });
+
   return orch;
 }
 
@@ -95,6 +105,56 @@ app.whenReady().then(async () => {
   registerHotkeys(mainWindow);
   createTray(mainWindow);
   orchestrator = createOrchestrator();
+
+  // === Auth Service ===
+  const cognitoClientId = (config.get('cognitoClientId') as string) ?? '6utrgprn6cvng5cr4ei93okv5s';
+  const awsRegion = (config.get('awsRegion') as string) ?? 'us-east-1';
+  authService = new CognitoAuthService({ region: awsRegion, clientId: cognitoClientId });
+
+  // Wire auth events
+  authService.on('authenticated', (state) => {
+    log.info('User authenticated', { email: state.email });
+    mainWindow?.webContents.send('auth-state-change', { isAuthenticated: true, email: state.email });
+    // Set token on sync service
+    if (state.tokens?.idToken) {
+      orchestrator?.setSyncAuthToken(state.tokens.idToken);
+    }
+    // Persist tokens
+    const stored = authService?.getTokensForStorage();
+    if (stored) {
+      config.set('authTokens', stored.tokens);
+      config.set('authEmail', stored.email);
+    }
+  });
+
+  authService.on('token-refreshed', (tokens) => {
+    orchestrator?.setSyncAuthToken(tokens.idToken);
+    config.set('authTokens', tokens);
+  });
+
+  authService.on('auth-expired', () => {
+    log.info('Auth expired, user needs to re-login');
+    mainWindow?.webContents.send('auth-state-change', { isAuthenticated: false });
+  });
+
+  authService.on('signed-out', () => {
+    mainWindow?.webContents.send('auth-state-change', { isAuthenticated: false });
+    config.set('authTokens', undefined);
+    config.set('authEmail', undefined);
+  });
+
+  // Restore session from persisted tokens
+  const storedTokens = config.get('authTokens') as any;
+  const storedEmail = config.get('authEmail') as string | undefined;
+  if (storedTokens && storedEmail) {
+    authService.restoreSession(storedTokens, storedEmail).then((restored) => {
+      if (restored) {
+        log.info('Session restored', { email: storedEmail });
+      } else {
+        log.info('Session restore failed, need re-login');
+      }
+    });
+  }
 
   // Auto-updater (skip in dev)
   if (!isDev) {
@@ -312,6 +372,85 @@ app.whenReady().then(async () => {
   ipcMain.handle('get-saved-call', async (_event, id: string) => {
     return orchestrator?.getSavedCall(id) ?? null;
   });
+
+  // === Speaker rename (mid-session) ===
+  ipcMain.handle('rename-speaker', (_event, source: 'you' | 'other', name: string) => {
+    orchestrator?.renameSpeaker(source, name);
+  });
+
+  ipcMain.handle('get-speaker-names', () => {
+    return orchestrator?.getSpeakerNames() ?? { you: 'You', other: 'Customer' };
+  });
+
+  // === Cloud Sync ===
+  ipcMain.handle('set-sync-token', (_event, token: string) => {
+    orchestrator?.setSyncAuthToken(token);
+    const config = ConfigStore.getInstance();
+    config.set('authToken', token);
+    log.info('Sync auth token updated');
+  });
+
+  ipcMain.handle('get-sync-status', () => {
+    return orchestrator?.getSyncStatus() ?? { pending: 0, failed: 0, total: 0 };
+  });
+
+  ipcMain.handle('force-sync', async () => {
+    await orchestrator?.forceSyncNow();
+    return orchestrator?.getSyncStatus() ?? { pending: 0, failed: 0, total: 0 };
+  });
+
+  ipcMain.handle('set-api-url', (_event, url: string) => {
+    const config = ConfigStore.getInstance();
+    config.set('apiUrl', url);
+    log.info('API URL updated', { url });
+  });
+
+  // === LLM Provider ===
+  ipcMain.handle('switch-llm-provider', (_event, provider: string, apiKey?: string) => {
+    const config = ConfigStore.getInstance();
+    config.set('llmProvider', provider);
+    if (apiKey) {
+      if (provider === 'groq') config.set('groqApiKey', apiKey);
+      if (provider === 'gemini') config.set('geminiApiKey', apiKey);
+    }
+    orchestrator?.switchLLMProvider(provider as any, apiKey);
+    log.info('LLM provider switched', { provider });
+  });
+
+  ipcMain.handle('get-llm-provider', () => {
+    const config = ConfigStore.getInstance();
+    return {
+      provider: config.get('llmProvider') ?? 'bedrock',
+      hasGroqKey: !!(config.get('groqApiKey')),
+      hasGeminiKey: !!(config.get('geminiApiKey')),
+    };
+  });
+
+  // === Auth IPC ===
+  ipcMain.handle('auth-sign-in', async (_event, email: string, password: string) => {
+    if (!authService) return { success: false, error: 'Auth service not ready' };
+    return authService.signIn(email, password);
+  });
+
+  ipcMain.handle('auth-sign-up', async (_event, email: string, password: string) => {
+    if (!authService) return { success: false, error: 'Auth service not ready' };
+    return authService.signUp(email, password);
+  });
+
+  ipcMain.handle('auth-confirm-sign-up', async (_event, email: string, code: string) => {
+    if (!authService) return { success: false, error: 'Auth service not ready' };
+    return authService.confirmSignUp(email, code);
+  });
+
+  ipcMain.handle('auth-sign-out', async () => {
+    await authService?.signOut();
+  });
+
+  ipcMain.handle('auth-get-state', () => {
+    if (!authService) return { isAuthenticated: false };
+    const state = authService.getState();
+    return { isAuthenticated: state.isAuthenticated, email: state.email };
+  });
 });
 
 app.on('window-all-closed', () => {
@@ -330,6 +469,7 @@ app.on('activate', () => {
 app.on('will-quit', async () => {
   unregisterHotkeys();
   orchestrator?.destroy();
+  authService?.destroy();
   cleanupIdle?.();
   cleanupMemory?.();
   await logger.shutdown();
