@@ -360,7 +360,21 @@ export class SessionOrchestrator extends EventEmitter {
         this.emit('post-call-result', processed);
       } catch (err) {
         console.error('[Orchestrator] Post-call processing failed:', err);
-        this.emit('post-call-status', 'Processing failed');
+        this.emit('post-call-status', 'Processing failed — using local cleanup');
+        // Fallback: at minimum, clean the transcript locally (no LLM needed)
+        try {
+          const cleanTranscript = this.postProcessor.cleanTranscript(transcript);
+          processed = {
+            title: call.name,
+            summary: '',
+            topics: [],
+            actionItems: [],
+            keyTakeaways: [],
+            nextSteps: [],
+            cleanTranscript,
+            processedAt: Date.now(),
+          };
+        } catch { /* truly failed */ }
       }
 
       // Queue for cloud sync with processed data
