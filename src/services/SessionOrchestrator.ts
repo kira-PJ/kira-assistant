@@ -4,10 +4,11 @@ import { TranscriptionService, TranscriptSegment } from './transcription';
 import { SpeakerIdentifier } from './transcription/SpeakerIdentifier';
 import { CoachingService, CoachingSuggestion, SentimentAnalysis, TalkRatioData } from './coaching';
 import { CallType } from './coaching/types';
-import { LLMProvider } from './coaching/LLMClient';
+import { LLMProvider, createLLMClient, ILLMClient } from './coaching/LLMClient';
 import { LocalStorage, SavedCall } from './storage';
 import { SyncService } from './cloud';
 import { PostCallReport } from './postcall/types';
+import { PostCallProcessor, ProcessedCall } from './postcall/PostCallProcessor';
 
 export type SessionState = 'idle' | 'initializing' | 'active' | 'error';
 
@@ -28,6 +29,8 @@ export class SessionOrchestrator extends EventEmitter {
   private speakerIdentifier: SpeakerIdentifier;
   private storage: LocalStorage;
   private sync: SyncService;
+  private postProcessor: PostCallProcessor;
+  private llm: ILLMClient;
   private state: SessionState = 'idle';
   private callStartTime = 0;
   private sessionConfig: { meetingName?: string; meetingContext?: string; callType?: string; myRole?: string; participants?: string } = {};
@@ -68,6 +71,17 @@ export class SessionOrchestrator extends EventEmitter {
     this.speakerIdentifier = new SpeakerIdentifier();
     this.storage = new LocalStorage();
     this.storage.initialize();
+
+    // LLM client for post-call processing (shared config with coaching)
+    this.llm = createLLMClient({
+      provider: config.llmProvider ?? 'bedrock',
+      awsRegion: config.awsRegion,
+      bedrockModelId: config.bedrockModelId,
+      groqApiKey: config.groqApiKey,
+      geminiApiKey: config.geminiApiKey,
+      maxTokens: 2000, // Larger for post-call summaries
+    });
+    this.postProcessor = new PostCallProcessor(this.llm);
 
     // Cloud sync — queues completed calls for upload
     this.sync = new SyncService(config.apiUrl);
@@ -168,6 +182,7 @@ export class SessionOrchestrator extends EventEmitter {
     this.transcription.shutdown();
     this.coaching.destroy();
     this.sync.shutdown();
+    this.llm.destroy();
   }
 
   private wireEvents(): void {
@@ -225,11 +240,13 @@ export class SessionOrchestrator extends EventEmitter {
     const transcript = this.transcription.getTranscript();
     if (transcript.length === 0) return;
 
+    const durationMs = Date.now() - this.callStartTime;
+
     const call: SavedCall = {
       id: `call-${this.callStartTime}`,
       name: this.sessionConfig.meetingName ?? `Call ${new Date(this.callStartTime).toLocaleString()}`,
       date: new Date(this.callStartTime).toISOString(),
-      durationMs: Date.now() - this.callStartTime,
+      durationMs,
       callType: this.sessionConfig.callType ?? 'discovery',
       participants: this.sessionConfig.participants ?? '',
       context: this.sessionConfig.meetingContext ?? '',
@@ -242,20 +259,38 @@ export class SessionOrchestrator extends EventEmitter {
       await this.storage.saveCall(call);
       console.log(`[Orchestrator] Call saved: ${call.name} (${transcript.length} segments)`);
 
-      // Queue for cloud sync (non-blocking)
+      // Run post-call processing (non-blocking, but we await for sync)
+      let processed: ProcessedCall | null = null;
+      try {
+        this.emit('post-call-status', 'Processing call...');
+        processed = await this.postProcessor.process(
+          transcript,
+          call.callType,
+          durationMs,
+          call.context
+        );
+        console.log(`[Orchestrator] Post-call processed: ${processed.title} (${processed.cleanTranscript.length} clean segments, ${processed.actionItems.length} action items)`);
+        this.emit('post-call-status', 'Done');
+        this.emit('post-call-result', processed);
+      } catch (err) {
+        console.error('[Orchestrator] Post-call processing failed:', err);
+        this.emit('post-call-status', 'Processing failed');
+      }
+
+      // Queue for cloud sync with processed data
       const talkRatio = this.coaching.getTalkRatio();
       const report: PostCallReport = {
         summary: {
           id: call.id,
-          title: call.name,
+          title: processed?.title ?? call.name,
           date: this.callStartTime,
-          durationMs: call.durationMs,
+          durationMs,
           callType: call.callType,
           participants: call.participants ? call.participants.split(/[,;]/).map(p => p.trim()) : [],
-          topicsCovered: [],
-          keyDecisions: [],
+          topicsCovered: processed?.topics.map(t => t.name) ?? [],
+          keyDecisions: processed?.keyTakeaways ?? [],
           overallSentiment: 'neutral',
-          synopsis: '',
+          synopsis: processed?.summary ?? '',
         },
         score: {
           callId: call.id,
@@ -265,11 +300,21 @@ export class SessionOrchestrator extends EventEmitter {
           improvements: [],
           timestamp: Date.now(),
         },
-        actionItems: [],
-        followUpEmail: { subject: '', body: '', actionItems: [], nextSteps: [] },
+        actionItems: (processed?.actionItems ?? []).map((a, i) => ({
+          id: `action-${Date.now()}-${i}`,
+          text: a.text,
+          owner: a.owner as 'you' | 'customer' | 'both',
+          context: '',
+          timestamp: Date.now(),
+        })),
+        followUpEmail: { subject: '', body: '', actionItems: processed?.nextSteps ?? [], nextSteps: processed?.nextSteps ?? [] },
         talkRatio: { you: talkRatio.you, other: talkRatio.other },
         totalWords: { you: talkRatio.yourWordCount ?? 0, other: talkRatio.otherWordCount ?? 0 },
       };
+
+      // Include processed data in sync (add to report for the API)
+      (report as any).processed = processed;
+      (report as any).cleanTranscript = processed?.cleanTranscript;
 
       this.sync.queueCallReport(report).catch(err => {
         console.error('[Orchestrator] Failed to queue sync:', err);

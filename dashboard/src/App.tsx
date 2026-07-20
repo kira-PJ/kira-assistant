@@ -22,8 +22,18 @@ interface CallMeta {
 
 interface CallFull extends CallMeta {
   transcript: { speaker: string; speakerName: string; text: string; timestamp: number; isPartial?: boolean }[];
+  cleanTranscript?: { speaker: string; speakerName: string; text: string; timestamp: number }[];
   summary?: any;
   actionItems?: any[];
+  processed?: {
+    title: string;
+    summary: string;
+    topics: { name: string; description: string }[];
+    actionItems: { text: string; owner: string; dueDate?: string }[];
+    keyTakeaways: string[];
+    cleanTranscript: { speaker: string; speakerName: string; text: string; timestamp: number }[];
+    nextSteps: string[];
+  };
 }
 
 // === Auth ===
@@ -348,13 +358,18 @@ const CallList: React.FC<{ calls: CallMeta[]; loading: boolean; onOpen: (id: str
 
 // === Call Detail ===
 const CallDetail: React.FC<{ call: CallFull; theme: typeof themes.dark }> = ({ call, theme: t }) => {
-  const finals = call.transcript?.filter(s => !s.isPartial) ?? [];
+  const processed = call.processed;
+  const cleanTranscript = processed?.cleanTranscript || call.cleanTranscript || [];
+  const rawTranscript = call.transcript?.filter(s => !s.isPartial) ?? [];
+  const [showRaw, setShowRaw] = useState(false);
+
+  const displayTranscript = showRaw ? rawTranscript : (cleanTranscript.length > 0 ? cleanTranscript : rawTranscript);
 
   return (
     <div>
       {/* Header */}
       <div style={{ marginBottom: '32px' }}>
-        <h2 style={{ fontSize: '26px', fontWeight: 700, marginBottom: '10px' }}>{call.callName}</h2>
+        <h2 style={{ fontSize: '26px', fontWeight: 700, marginBottom: '10px' }}>{processed?.title || call.callName}</h2>
         <div style={{ display: 'flex', gap: '20px', fontSize: '14px', color: t.textMuted, flexWrap: 'wrap', alignItems: 'center' }}>
           <span>{new Date(call.callDate).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })}</span>
           <span>{Math.round(call.durationMs / 60000)} min</span>
@@ -362,6 +377,79 @@ const CallDetail: React.FC<{ call: CallFull; theme: typeof themes.dark }> = ({ c
           {call.participants && <span>{call.participants}</span>}
         </div>
       </div>
+
+      {/* Summary */}
+      {processed?.summary && (
+        <div style={{ marginBottom: '24px', background: t.surface, padding: '20px 24px', borderRadius: '12px', border: `1px solid ${t.border}` }}>
+          <h4 style={{ fontSize: '13px', fontWeight: 600, color: t.textMuted, marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Summary</h4>
+          <p style={{ fontSize: '15px', color: t.text, lineHeight: '1.8' }}>{processed.summary}</p>
+        </div>
+      )}
+
+      {/* Key Takeaways */}
+      {processed?.keyTakeaways && processed.keyTakeaways.length > 0 && (
+        <div style={{ marginBottom: '24px', background: t.surface, padding: '20px 24px', borderRadius: '12px', border: `1px solid ${t.border}` }}>
+          <h4 style={{ fontSize: '13px', fontWeight: 600, color: t.textMuted, marginBottom: '14px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Key Takeaways</h4>
+          <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+            {processed.keyTakeaways.map((item, i) => (
+              <li key={i} style={{ fontSize: '15px', color: t.text, lineHeight: '1.7', marginBottom: '8px', paddingLeft: '16px', position: 'relative' }}>
+                <span style={{ position: 'absolute', left: 0, color: t.accent }}>•</span>
+                {item}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/* Topics */}
+      {processed?.topics && processed.topics.length > 0 && (
+        <div style={{ marginBottom: '24px', background: t.surface, padding: '20px 24px', borderRadius: '12px', border: `1px solid ${t.border}` }}>
+          <h4 style={{ fontSize: '13px', fontWeight: 600, color: t.textMuted, marginBottom: '14px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Topics Covered</h4>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            {processed.topics.map((topic, i) => (
+              <div key={i}>
+                <span style={{ fontSize: '14px', fontWeight: 600, color: t.text }}>{topic.name}</span>
+                <p style={{ fontSize: '14px', color: t.textSecondary, margin: '4px 0 0', lineHeight: '1.6' }}>{topic.description}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Action Items */}
+      {processed?.actionItems && processed.actionItems.length > 0 && (
+        <div style={{ marginBottom: '24px', background: t.surface, padding: '20px 24px', borderRadius: '12px', border: `1px solid ${t.accent}30` }}>
+          <h4 style={{ fontSize: '13px', fontWeight: 600, color: t.accent, marginBottom: '14px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Action Items</h4>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            {processed.actionItems.map((item, i) => (
+              <div key={i} style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+                <span style={{ width: '20px', height: '20px', borderRadius: '4px', border: `2px solid ${t.border}`, flexShrink: 0, marginTop: '2px' }} />
+                <div>
+                  <p style={{ fontSize: '15px', color: t.text, margin: 0, lineHeight: '1.6' }}>{item.text}</p>
+                  <span style={{ fontSize: '12px', color: t.textMuted }}>
+                    Owner: {item.owner}{item.dueDate ? ` · Due: ${item.dueDate}` : ''}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Next Steps */}
+      {processed?.nextSteps && processed.nextSteps.length > 0 && (
+        <div style={{ marginBottom: '24px', background: t.surface, padding: '20px 24px', borderRadius: '12px', border: `1px solid ${t.border}` }}>
+          <h4 style={{ fontSize: '13px', fontWeight: 600, color: t.textMuted, marginBottom: '14px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Next Steps</h4>
+          <ol style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+            {processed.nextSteps.map((step, i) => (
+              <li key={i} style={{ fontSize: '15px', color: t.text, lineHeight: '1.7', marginBottom: '8px', paddingLeft: '28px', position: 'relative' }}>
+                <span style={{ position: 'absolute', left: 0, color: t.accent, fontWeight: 700, fontSize: '13px' }}>{i + 1}.</span>
+                {step}
+              </li>
+            ))}
+          </ol>
+        </div>
+      )}
 
       {/* Talk Ratio */}
       {call.talkRatio && (
@@ -378,23 +466,25 @@ const CallDetail: React.FC<{ call: CallFull; theme: typeof themes.dark }> = ({ c
         </div>
       )}
 
-      {/* Context */}
-      {call.context && (
-        <div style={{ marginBottom: '24px', background: t.surface, padding: '20px 24px', borderRadius: '12px', border: `1px solid ${t.border}` }}>
-          <h4 style={{ fontSize: '13px', fontWeight: 600, color: t.textMuted, marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Meeting Context</h4>
-          <p style={{ fontSize: '15px', color: t.textSecondary, lineHeight: '1.7' }}>{call.context}</p>
-        </div>
-      )}
-
       {/* Transcript */}
-      {finals.length > 0 && (
+      {displayTranscript.length > 0 && (
         <div style={{ background: t.surface, padding: '24px', borderRadius: '12px', border: `1px solid ${t.border}` }}>
-          <h4 style={{ fontSize: '13px', fontWeight: 600, color: t.textMuted, marginBottom: '20px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-            Transcript ({finals.length} segments)
-          </h4>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '18px', maxHeight: '600px', overflowY: 'auto' }}>
-            {finals.map((seg, i) => (
-              <div key={i} style={{ paddingBottom: '14px', borderBottom: i < finals.length - 1 ? `1px solid ${t.border}` : 'none' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+            <h4 style={{ fontSize: '13px', fontWeight: 600, color: t.textMuted, textTransform: 'uppercase', letterSpacing: '0.5px', margin: 0 }}>
+              {showRaw ? 'Full Transcript' : 'Transcript'} ({displayTranscript.length} segments)
+            </h4>
+            {cleanTranscript.length > 0 && rawTranscript.length > 0 && (
+              <button
+                onClick={() => setShowRaw(!showRaw)}
+                style={{ fontSize: '13px', color: t.textMuted, background: t.surfaceAlt, border: `1px solid ${t.border}`, borderRadius: '6px', padding: '4px 12px', cursor: 'pointer' }}
+              >
+                {showRaw ? 'Show Clean' : 'Show Full'}
+              </button>
+            )}
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', maxHeight: '600px', overflowY: 'auto' }}>
+            {displayTranscript.map((seg, i) => (
+              <div key={i} style={{ paddingBottom: '12px', borderBottom: i < displayTranscript.length - 1 ? `1px solid ${t.border}` : 'none' }}>
                 <span style={{ fontSize: '13px', fontWeight: 700, color: seg.speaker === 'you' ? t.speakerYou : t.speakerOther, display: 'block', marginBottom: '4px' }}>
                   {seg.speakerName}
                 </span>
@@ -405,10 +495,9 @@ const CallDetail: React.FC<{ call: CallFull; theme: typeof themes.dark }> = ({ c
         </div>
       )}
 
-      {finals.length === 0 && (
+      {displayTranscript.length === 0 && (
         <div style={{ textAlign: 'center', padding: '60px', color: t.textMuted, background: t.surface, borderRadius: '12px', border: `1px solid ${t.border}` }}>
           <p style={{ fontSize: '16px' }}>No transcript data synced for this call yet</p>
-          <p style={{ fontSize: '14px', marginTop: '8px' }}>The full transcript will appear here after the next sync</p>
         </div>
       )}
     </div>

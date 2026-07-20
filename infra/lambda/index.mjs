@@ -106,10 +106,12 @@ async function saveCall(userId, body) {
     const transcriptData = {
       callId,
       transcript: body.transcript || [],
+      cleanTranscript: body.cleanTranscript || body.processed?.cleanTranscript || [],
       summary: body.summary || {},
       score: body.score || {},
       actionItems: body.actionItems || [],
       followUpEmail: body.followUpEmail || {},
+      processed: body.processed || null,
     };
 
     await s3.send(new PutObjectCommand({
@@ -155,9 +157,11 @@ async function getCall(userId, callId) {
   return response(200, {
     ...metadata,
     transcript,
+    cleanTranscript: fullData.cleanTranscript || [],
     summary: fullData.summary || {},
     score: fullData.score || {},
     actionItems: fullData.actionItems || [],
+    processed: fullData.processed || null,
   });
 }
 
