@@ -232,6 +232,7 @@ app.whenReady().then(async () => {
   ipcMain.handle('close-window', () => {
     if (mainWindow) {
       mainWindow.close();
+      app.quit();
     }
   });
 
