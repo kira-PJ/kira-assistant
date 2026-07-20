@@ -8,10 +8,15 @@ import {
 import { TranscriptionEngine, TranscriptionOptions, TranscriptSegment } from './types';
 
 /**
- * AWSTranscribeEngine - Real-time persistent streaming transcription
+ * AWSTranscribeEngine - Real-time streaming transcription with speaker diarization
  *
- * ONE session stays open per audio source. Audio pushed continuously.
- * Partial results appear immediately (grey), finals replace them (white).
+ * Two streams:
+ * - Mic stream: always labeled as "You" (speaker = 'you')
+ * - System stream: speaker diarization enabled — identifies Speaker 0, 1, 2, etc.
+ *
+ * Each speaker on the system channel gets a unique speaker ID that persists
+ * across the session. The UI can rename "Speaker 0" → "Timothy", "Speaker 1" → "Ali"
+ * and those labels stay consistent for that speaker.
  */
 export class AWSTranscribeEngine extends EventEmitter implements TranscriptionEngine {
   private client: TranscribeStreamingClient | null = null;
@@ -45,18 +50,19 @@ export class AWSTranscribeEngine extends EventEmitter implements TranscriptionEn
 
     let session = source === 'mic' ? this.micSession : this.sysSession;
 
-    // Start session if not running
     if (!session || session.ended) {
-      session = new PersistentStream(this.client, source, this.region, () => ++this.segmentCounter);
+      const enableDiarization = source === 'system'; // Only diarize system audio
+      session = new PersistentStream(
+        this.client, source, this.region,
+        () => ++this.segmentCounter,
+        enableDiarization
+      );
       if (source === 'mic') this.micSession = session;
       else this.sysSession = session;
       session.start();
     }
 
-    // Push audio (non-blocking)
     session.push(pcmData);
-
-    // Return any accumulated results
     return session.drain();
   }
 
@@ -73,35 +79,43 @@ export class AWSTranscribeEngine extends EventEmitter implements TranscriptionEn
 
 /**
  * PersistentStream - single long-lived Transcribe WebSocket session
+ * With optional speaker diarization for the system audio channel.
  */
 class PersistentStream {
   private client: TranscribeStreamingClient;
   private source: 'mic' | 'system';
   private region: string;
   private getNextId: () => number;
+  private enableDiarization: boolean;
   private segments: TranscriptSegment[] = [];
   private audioChunks: Buffer[] = [];
   private wakeUp: (() => void) | null = null;
   private stopping = false;
   ended = false;
 
-  constructor(client: TranscribeStreamingClient, source: 'mic' | 'system', region: string, getNextId: () => number) {
+  constructor(
+    client: TranscribeStreamingClient,
+    source: 'mic' | 'system',
+    region: string,
+    getNextId: () => number,
+    enableDiarization = false
+  ) {
     this.client = client;
     this.source = source;
     this.region = region;
     this.getNextId = getNextId;
+    this.enableDiarization = enableDiarization;
   }
 
   start(): void {
     this.run().catch((err) => {
-      console.error(`[AWSTranscribe] Stream ${this.source} error:`, err?.message?.slice(0, 100));
+      console.error(`[AWSTranscribe] Stream ${this.source} error:`, err?.message?.slice(0, 200));
       this.ended = true;
     });
   }
 
   push(audio: Buffer): void {
     this.audioChunks.push(audio);
-    // Wake up the generator if it's waiting
     if (this.wakeUp) {
       const wake = this.wakeUp;
       this.wakeUp = null;
@@ -110,8 +124,7 @@ class PersistentStream {
   }
 
   drain(): TranscriptSegment[] {
-    const result = this.segments.splice(0);
-    return result;
+    return this.segments.splice(0);
   }
 
   stop(): void {
@@ -128,32 +141,37 @@ class PersistentStream {
 
     async function* audioGenerator(): AsyncGenerator<AudioStream> {
       while (!self.stopping) {
-        // Yield all queued chunks
         while (self.audioChunks.length > 0) {
           const chunk = self.audioChunks.shift()!;
           yield { AudioEvent: { AudioChunk: chunk } };
         }
-        // Wait for more audio (with timeout to prevent hanging)
         await new Promise<void>((resolve) => {
           self.wakeUp = resolve;
-          setTimeout(resolve, 50); // poll every 50ms
+          setTimeout(resolve, 50);
         });
       }
-      // End signal
       yield { AudioEvent: { AudioChunk: Buffer.alloc(0) } };
     }
 
-    const command = new StartStreamTranscriptionCommand({
+    // Build command with optional speaker diarization
+    const commandInput: any = {
       LanguageCode: LanguageCode.EN_US,
       MediaEncoding: 'pcm',
       MediaSampleRateHertz: 16000,
       AudioStream: audioGenerator(),
       EnablePartialResultsStabilization: true,
       PartialResultsStability: 'high',
-    });
+    };
 
+    // Enable speaker diarization for system audio (identifies multiple speakers)
+    if (this.enableDiarization) {
+      commandInput.ShowSpeakerLabel = true;
+      console.log(`[AWSTranscribe] Speaker diarization ENABLED for ${this.source}`);
+    }
+
+    const command = new StartStreamTranscriptionCommand(commandInput);
     const response = await this.client.send(command);
-    console.log(`[AWSTranscribe] Persistent stream started for: ${this.source}`);
+    console.log(`[AWSTranscribe] Stream started: ${this.source} (diarization: ${this.enableDiarization})`);
 
     if (response.TranscriptResultStream) {
       for await (const event of response.TranscriptResultStream) {
@@ -165,16 +183,40 @@ class PersistentStream {
               const text = alt.Transcript?.trim();
               if (!text || text.length < 2) continue;
 
-              this.segments.push({
+              // Extract speaker label from diarization (if enabled)
+              let speakerLabel = '';
+              let speakerId = 'other';
+
+              if (this.enableDiarization && alt.Items) {
+                // Find the dominant speaker for this segment
+                const speakerCounts: Record<string, number> = {};
+                for (const item of alt.Items) {
+                  if (item.Speaker) {
+                    speakerCounts[item.Speaker] = (speakerCounts[item.Speaker] ?? 0) + 1;
+                  }
+                }
+                // Pick the speaker with the most words in this segment
+                const dominant = Object.entries(speakerCounts).sort((a, b) => b[1] - a[1])[0];
+                if (dominant) {
+                  speakerLabel = dominant[0]; // e.g., "0", "1", "2"
+                  speakerId = `speaker_${speakerLabel}`; // Unique per speaker
+                }
+              }
+
+              const segment: TranscriptSegment = {
                 id: `aws-${Date.now()}-${this.getNextId()}`,
-                speaker: this.source === 'mic' ? 'you' : 'other',
-                speakerName: this.source === 'mic' ? 'You' : 'Customer',
+                speaker: this.source === 'mic' ? 'you' : speakerId as any,
+                speakerName: this.source === 'mic'
+                  ? 'You'
+                  : speakerLabel ? `Speaker ${parseInt(speakerLabel) + 1}` : 'Other',
                 text,
                 timestamp: Date.now(),
                 endTimestamp: Date.now(),
                 confidence: result.IsPartial ? 0.6 : 0.9,
                 isPartial: result.IsPartial ?? false,
-              });
+              };
+
+              this.segments.push(segment);
             }
           }
         }

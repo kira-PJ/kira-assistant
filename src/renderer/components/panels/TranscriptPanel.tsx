@@ -4,7 +4,7 @@ import { TranscriptEntry } from '../../types';
 interface TranscriptPanelProps {
   entries: TranscriptEntry[];
   onBookmark: (id: string) => void;
-  onRenameSpeaker: (source: 'you' | 'other', newName: string) => void;
+  onRenameSpeaker: (source: string, newName: string) => void;
 }
 
 /**
@@ -13,8 +13,8 @@ interface TranscriptPanelProps {
  */
 const EditableSpeakerName: React.FC<{
   name: string;
-  speaker: 'you' | 'other';
-  onRename: (source: 'you' | 'other', newName: string) => void;
+  speaker: string;
+  onRename: (source: string, newName: string) => void;
 }> = ({ name, speaker, onRename }) => {
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState(name);
@@ -86,7 +86,7 @@ const TranscriptPanel: React.FC<TranscriptPanelProps> = ({ entries, onBookmark, 
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
   };
 
-  const handleRenameSpeaker = useCallback((source: 'you' | 'other', newName: string) => {
+  const handleRenameSpeaker = useCallback((source: string, newName: string) => {
     onRenameSpeaker(source, newName);
   }, [onRenameSpeaker]);
 

@@ -1,6 +1,6 @@
 export interface TranscriptSegment {
   id: string;
-  speaker: 'you' | 'other';
+  speaker: string; // 'you' | 'speaker_0' | 'speaker_1' | 'speaker_2' | 'other'
   speakerName: string;
   text: string;
   timestamp: number;

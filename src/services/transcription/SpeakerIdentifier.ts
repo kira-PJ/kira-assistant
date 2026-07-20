@@ -13,27 +13,22 @@ const SPEAKER_LABELS: Record<string, { you: string; other: string }> = {
 };
 
 /**
- * SpeakerIdentifier - Multi-speaker support
+ * SpeakerIdentifier - Multi-speaker support with diarization
  *
- * The audio has two channels: mic (you) and system (everyone else).
- * Since system audio mixes all other participants into one stream,
- * we can't auto-separate them. Instead we:
+ * Works with AWS Transcribe speaker diarization which assigns
+ * speaker IDs (speaker_0, speaker_1, speaker_2) to segments.
  *
- * 1. Allow pre-setting participant names from the pre-call panel
- * 2. Auto-detect name introductions
- * 3. Support per-segment renaming (edit ONE segment, not all)
- * 4. Track multiple "other" speakers by segment ID
- *
- * When user renames a segment to "Timothy", only that segment and
- * consecutive segments from the same speaker get that name — NOT all
- * "other" segments globally.
+ * When user renames "Speaker 1" → "Timothy", all segments with
+ * speaker_0 get renamed retroactively AND going forward.
  */
 export class SpeakerIdentifier {
   private youName = 'You';
   private defaultOtherName = 'Speaker';
-  private participants: string[] = []; // Pre-set participant names
-  private segmentOverrides: Map<string, string> = new Map(); // segmentId → custom name
-  private lastOtherName: string | null = null; // Track last assigned "other" name
+  private participants: string[] = [];
+  /** Map speakerId (e.g. 'speaker_0') → display name */
+  private speakerIdNames: Map<string, string> = new Map();
+  /** Per-segment overrides for manual edits */
+  private segmentOverrides: Map<string, string> = new Map();
   private callType = 'discovery';
   private myRole: 'leading' | 'attending' = 'leading';
   private introPatterns: RegExp[];
@@ -55,7 +50,6 @@ export class SpeakerIdentifier {
     if (myRole) this.myRole = myRole;
 
     const labels = SPEAKER_LABELS[type] ?? SPEAKER_LABELS['discovery'];
-
     if (type === 'training') {
       this.defaultOtherName = this.myRole === 'attending' ? 'Trainer' : 'Student';
     } else if (type === 'demo') {
@@ -67,108 +61,114 @@ export class SpeakerIdentifier {
 
   /**
    * Set participants from pre-call config.
-   * First participant becomes the default "other" name.
-   * All are stored for reference.
    */
   setParticipants(participantList: string): void {
     this.participants = participantList
       .split(/[,;]/)
       .map(p => p.replace(/\(.*?\)/g, '').trim())
       .filter(p => p.length > 0);
-
-    // Use first participant as default other name
-    if (this.participants.length > 0) {
-      this.defaultOtherName = this.participants[0];
-      this.lastOtherName = this.participants[0];
-    }
   }
 
   /**
-   * Process a segment — assign speaker name.
+   * Process a segment — assign speaker name based on diarized speaker ID.
    */
   processSegment(segment: TranscriptSegment): TranscriptSegment {
-    // Check for per-segment override
+    // Per-segment override (manual edit of a specific segment)
     const override = this.segmentOverrides.get(segment.id);
     if (override) {
       return { ...segment, speakerName: override };
     }
 
-    // "You" is always from mic
+    // Mic = always you
     if (segment.speaker === 'you') {
       return { ...segment, speakerName: this.youName };
+    }
+
+    // Check if this speaker ID has been renamed (e.g., speaker_0 → "Timothy")
+    const namedSpeaker = this.speakerIdNames.get(segment.speaker);
+    if (namedSpeaker) {
+      return { ...segment, speakerName: namedSpeaker };
     }
 
     // Try to detect a name introduction
     const detectedName = this.detectName(segment.text);
     if (detectedName) {
-      this.lastOtherName = detectedName;
-      // Add to participants if new
+      this.speakerIdNames.set(segment.speaker, detectedName);
       if (!this.participants.includes(detectedName)) {
         this.participants.push(detectedName);
       }
+      return { ...segment, speakerName: detectedName };
     }
 
-    // Use last known other name or default
-    const name = this.lastOtherName ?? this.defaultOtherName;
-    return { ...segment, speakerName: name };
+    // Use Transcribe's speaker label if present (e.g., "Speaker 1")
+    if (segment.speakerName && segment.speakerName.startsWith('Speaker ')) {
+      return segment;
+    }
+
+    // Fallback
+    return { ...segment, speakerName: this.defaultOtherName };
   }
 
   /**
-   * Rename a specific segment (and optionally consecutive segments).
-   * This does NOT rename ALL "other" segments — only the targeted ones.
+   * Rename a speaker by their diarized ID.
+   * This renames ALL segments (past and future) from that speaker.
+   * Called when user clicks "Speaker 1" and types "Timothy".
    */
-  renameSegment(segmentId: string, newName: string): void {
-    this.segmentOverrides.set(segmentId, newName);
-    // Track this as the current speaker so future segments use this name
-    this.lastOtherName = newName;
-    // Add to participants if new
+  renameSpeakerId(speakerId: string, newName: string): void {
+    this.speakerIdNames.set(speakerId, newName);
     if (!this.participants.includes(newName)) {
       this.participants.push(newName);
     }
   }
 
   /**
-   * Rename a speaker by source ('you' or 'other').
-   * For 'other', this sets the DEFAULT name for future segments
-   * but does NOT retroactively rename all past segments.
+   * Rename a specific segment by its ID (fine-grained override).
    */
-  renameSpeaker(source: 'you' | 'other', name: string): void {
-    if (source === 'you') {
-      this.youName = name;
-    } else {
-      this.defaultOtherName = name;
-      this.lastOtherName = name;
-    }
+  renameSegment(segmentId: string, newName: string): void {
+    this.segmentOverrides.set(segmentId, newName);
   }
 
   /**
-   * Set name for legacy compatibility
+   * Rename by source type (legacy support).
    */
+  renameSpeaker(source: string, name: string): void {
+    if (source === 'you') {
+      this.youName = name;
+    } else {
+      // If it's a speaker_X id, rename that specific speaker
+      if (source.startsWith('speaker_')) {
+        this.renameSpeakerId(source, name);
+      } else {
+        this.defaultOtherName = name;
+      }
+    }
+  }
+
   setName(source: 'you' | 'other', name: string): void {
     this.renameSpeaker(source, name);
   }
 
-  /**
-   * Get current state
-   */
   getNames(): Record<string, string> {
-    return {
-      you: this.youName,
-      other: this.lastOtherName ?? this.defaultOtherName,
-      participants: this.participants.join(', '),
-    };
+    const names: Record<string, string> = { you: this.youName };
+    for (const [id, name] of this.speakerIdNames) {
+      names[id] = name;
+    }
+    names['_default'] = this.defaultOtherName;
+    names['_participants'] = this.participants.join(', ');
+    return names;
   }
 
-  /**
-   * Get list of known participants
-   */
   getParticipants(): string[] {
     return [...this.participants];
   }
 
   /**
-   * Detect a name from an introduction phrase
+   * Get the display name for a speaker ID (for retroactive rename in UI)
    */
+  getNameForSpeakerId(speakerId: string): string | undefined {
+    return this.speakerIdNames.get(speakerId);
+  }
+
   private detectName(text: string): string | null {
     for (const pattern of this.introPatterns) {
       const match = text.match(pattern);
@@ -176,9 +176,7 @@ export class SpeakerIdentifier {
         const name = match[1].trim();
         if (name.length >= 2 && name.length <= 15 && /^[A-Z]/.test(name)) {
           const falsePositives = ['The', 'This', 'That', 'Here', 'There', 'Just', 'Well', 'Also', 'Actually'];
-          if (!falsePositives.includes(name)) {
-            return name;
-          }
+          if (!falsePositives.includes(name)) return name;
         }
       }
     }

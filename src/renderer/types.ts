@@ -75,7 +75,7 @@ export interface WindowState {
 
 export interface TranscriptEntry {
   id: string;
-  speaker: 'you' | 'other';
+  speaker: string; // 'you' | 'speaker_0' | 'speaker_1' | etc.
   speakerName: string;
   text: string;
   timestamp: number;

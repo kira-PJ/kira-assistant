@@ -200,6 +200,14 @@ export class SessionOrchestrator extends EventEmitter {
       if (chunkCount <= 3 || chunkCount % 50 === 0) {
         console.log(`[Orchestrator] Audio chunk #${chunkCount}: source=${chunk.source}, active=${chunk.isActive}, len=${chunk.buffer.length}`);
       }
+      // Noise gate: only process mic audio if energy is above threshold
+      // This filters out background chatter and ambient noise
+      if (chunk.source === 'mic') {
+        const energy = this.calculateEnergy(chunk.buffer);
+        if (energy < 200) { // Below threshold = background noise, skip
+          return;
+        }
+      }
       this.transcription.processChunk(chunk);
       this.recorder.addChunk(chunk);
     });
@@ -233,6 +241,21 @@ export class SessionOrchestrator extends EventEmitter {
       this.emit('tech-mention', mention);
     });
 
+    // Auto-stop detection
+    this.coaching.on('call-ending-detected', () => {
+      console.log('[Orchestrator] Call ending detected — auto-stopping in 10s');
+      setTimeout(() => {
+        if (this.state === 'active') {
+          this.stop();
+          this.emit('auto-stopped', 'Call end detected (farewell + silence)');
+        }
+      }, 10000); // Wait 10s to confirm it's really ending
+    });
+
+    this.coaching.on('call-type-detected', (type: string) => {
+      this.emit('call-type-detected', type);
+    });
+
     // Error forwarding
     this.audio.on('error', (err) => this.emit('error', err));
     this.transcription.on('error', (err) => this.emit('error', err));
@@ -242,6 +265,21 @@ export class SessionOrchestrator extends EventEmitter {
   private setState(state: SessionState): void {
     this.state = state;
     this.emit('state-change', state);
+  }
+
+  /**
+   * Calculate RMS energy of a PCM audio buffer (16-bit signed).
+   * Used as a noise gate — low energy = background noise.
+   */
+  private calculateEnergy(buffer: Buffer): number {
+    if (buffer.length < 2) return 0;
+    let sum = 0;
+    const samples = buffer.length / 2;
+    for (let i = 0; i < buffer.length - 1; i += 2) {
+      const sample = buffer.readInt16LE(i);
+      sum += sample * sample;
+    }
+    return Math.sqrt(sum / samples);
   }
 
   private async autoSaveCall(): Promise<void> {

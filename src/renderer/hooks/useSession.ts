@@ -166,13 +166,13 @@ export function useSession() {
     );
   }, []);
 
-  const renameSpeaker = useCallback((source: 'you' | 'other', newName: string) => {
-    // Update all existing entries from this speaker retroactively
+  const renameSpeaker = useCallback((source: string, newName: string) => {
+    // Update all existing entries from this speaker ID retroactively
     setTranscript((prev) =>
       prev.map((s) => (s.speaker === source ? { ...s, speakerName: newName } : s))
     );
     // Persist to main process for future segments
-    window.ghostAPI?.renameSpeaker?.(source, newName);
+    window.ghostAPI?.renameSpeaker?.(source as any, newName);
   }, []);
 
   const clearTranscript = useCallback(() => {

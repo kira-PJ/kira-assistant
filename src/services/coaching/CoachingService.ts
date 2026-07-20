@@ -103,12 +103,15 @@ export class CoachingService extends EventEmitter {
     this.updateTalkRatio(segment);
     this.resetSilenceTimer();
 
-    // Detect tech mentions (sync, no AI needed)
+    // Detect tech mentions (deduplicated — only emit once per term)
     const techMentions = this.detector.detectTechMentions(segment);
     for (const mention of techMentions) {
+      const alreadySeen = this.techMentions.some(m => m.term.toLowerCase() === mention.term.toLowerCase());
       this.techMentions.push(mention);
-      this.emit('tech-mention', mention);
-      this.queueTechLookup(mention);
+      if (!alreadySeen) {
+        this.emit('tech-mention', mention);
+        this.queueTechLookup(mention);
+      }
     }
 
     // Detect questions — DON'T fire immediately.
@@ -127,8 +130,8 @@ export class CoachingService extends EventEmitter {
       this.pendingQuestionTime = Date.now();
     }
 
-    // Auto-detect call type from first few segments
-    if (this.segments.length === 3) {
+    // Auto-detect call type at multiple points for better accuracy
+    if (this.segments.length === 3 || this.segments.length === 8 || this.segments.length === 15) {
       this.autoDetectCallType();
     }
 
@@ -309,26 +312,32 @@ Respond with JSON:
 
   private async maybeRunPeriodicChecks(segment: TranscriptSegment): Promise<void> {
     const now = Date.now();
-    // Minimum 15 seconds between any AI suggestions (was 5s — too noisy)
-    if (now - this.lastSuggestionTime < 15000) return;
+    // Minimum 20 seconds between any AI suggestions
+    if (now - this.lastSuggestionTime < 20000) return;
     if (this.processingLock) return;
+
+    // If we're attending (not leading), be VERY conservative
+    // Only run checks if explicitly addressed or after long stretches
+    const isAttending = this.meetingContext.myRole === 'attending';
 
     this.processingLock = true;
     this.lastSuggestionTime = now;
 
     try {
-      // Sentiment analysis: every 10 segments
-      if (this.segments.length >= 5 && this.segments.length % 10 === 0) {
+      // Sentiment analysis: every 15 segments
+      if (this.segments.length >= 5 && this.segments.length % 15 === 0) {
         await this.runSentimentAnalysis();
       }
 
-      // Question suggestions — very conservative:
-      // Training: every 20 segments (you're listening, don't interrupt thinking)
-      // Discovery: every 12 segments
-      // Others: every 15 segments
-      const questionInterval = this.callType === 'training' ? 20
+      // Question suggestions — VERY conservative for attending roles
+      // Attending: every 30 segments (basically never unless it's truly relevant)
+      // Training: every 25 segments
+      // Discovery (leading): every 12 segments
+      // Others: every 18 segments
+      const questionInterval = isAttending ? 30
+        : this.callType === 'training' ? 25
         : this.callType === 'discovery' ? 12
-        : 15;
+        : 18;
 
       const recentOtherSegments = this.segments.slice(-questionInterval).filter(s => s.speaker !== 'you');
       const hasEnoughContext = recentOtherSegments.length >= 5;
@@ -572,12 +581,24 @@ Respond with JSON:
   }
 
   private async onSilenceDetected(): Promise<void> {
-    // Silence = opportunity for a suggestion
     if (this.segments.length < 3) return;
+
+    // Check for call-end signals in the last few segments
+    const lastSegments = this.segments.slice(-5).map(s => s.text.toLowerCase()).join(' ');
+    const farewellPatterns = /\b(thank you|thanks everyone|bye|goodbye|talk later|have a good|take care|cheers|see you|that's all|wrap up|end the call)\b/i;
+    if (farewellPatterns.test(lastSegments)) {
+      // Likely end of call — emit event for auto-stop
+      this.emit('call-ending-detected');
+      console.log('[Coaching] Call-end phrases detected after silence');
+      return; // Don't suggest anything during farewell
+    }
+
+    // Only suggest during pauses if we're leading (not attending)
+    if (this.meetingContext.myRole === 'attending') return;
 
     const context = this.getContext();
     const systemPrompt = PromptTemplates.getSystemPrompt(this.callType);
-    const prompt = `There's been a pause in the conversation (8+ seconds of silence).
+    const prompt = `There's been a pause in the conversation (15+ seconds of silence).
 
 Context so far:
 ${context.recentTranscript}
@@ -662,29 +683,48 @@ Respond with JSON:
   // === Call Type Auto-Detection ===
 
   private async autoDetectCallType(): Promise<void> {
-    const earlyText = this.segments.slice(0, 5).map(s => s.text).join(' ');
+    const earlyText = this.segments.slice(0, Math.min(15, this.segments.length)).map(s => s.text).join(' ');
 
-    // Simple heuristic detection first
     const lower = earlyText.toLowerCase();
     let detected: CallType | null = null;
+    let detectedRole: 'leading' | 'attending' | null = null;
 
-    if (/demo|show you|walk.*through|let me demonstrate/i.test(lower)) {
+    // Detect call type
+    if (/demo|show you|walk.*through|let me demonstrate|presentation/i.test(lower)) {
       detected = 'demo';
-    } else if (/training|learn|course|module|exercise/i.test(lower)) {
+    } else if (/training|learn|course|module|exercise|teach|workshop/i.test(lower)) {
       detected = 'training';
-    } else if (/follow.?up|last time|action items|checking in/i.test(lower)) {
+    } else if (/follow.?up|last time|action items|checking in|catch up/i.test(lower)) {
       detected = 'followup';
-    } else if (/price|cost|contract|discount|negotiate|proposal/i.test(lower)) {
+    } else if (/price|cost|contract|discount|negotiate|proposal|pricing/i.test(lower)) {
       detected = 'negotiation';
-    } else if (/architecture|technical|deep.?dive|implement|design/i.test(lower)) {
+    } else if (/architecture|technical|deep.?dive|implement|design|solution/i.test(lower)) {
       detected = 'technical';
-    } else if (/tell me about|challenges|looking for|evaluate|pain point/i.test(lower)) {
+    } else if (/tell me about|challenges|looking for|evaluate|pain point|discovery|understand.*needs/i.test(lower)) {
       detected = 'discovery';
+    }
+
+    // Detect role — if "you" segments are mostly short responses, you're attending
+    const youSegments = this.segments.filter(s => s.speaker === 'you');
+    const otherSegments = this.segments.filter(s => s.speaker !== 'you');
+    if (youSegments.length > 0 && otherSegments.length > 0) {
+      const youWords = youSegments.reduce((sum, s) => sum + s.text.split(/\s+/).length, 0);
+      const otherWords = otherSegments.reduce((sum, s) => sum + s.text.split(/\s+/).length, 0);
+      // If others talk 3x more than you, you're probably attending
+      if (otherWords > youWords * 3) {
+        detectedRole = 'attending';
+      } else if (youWords > otherWords * 2) {
+        detectedRole = 'leading';
+      }
     }
 
     if (detected && detected !== this.callType) {
       this.callType = detected;
       this.emit('call-type-detected', detected);
+      console.log(`[Coaching] Auto-detected call type: ${detected}`);
+    }
+    if (detectedRole) {
+      this.emit('role-detected', detectedRole);
     }
   }
 }

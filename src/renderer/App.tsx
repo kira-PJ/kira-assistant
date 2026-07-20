@@ -91,10 +91,22 @@ const App: React.FC = () => {
     if (session.isCapturing) {
       session.stopCapture();
     } else {
-      // Show pre-call panel instead of starting immediately
+      // Show pre-call panel for configuration
       setShowPreCall(true);
     }
   }, [session]);
+
+  // Quick start — skip pre-call panel, start immediately with defaults
+  const handleQuickStart = useCallback(async () => {
+    setShowPreCall(false);
+    await window.ghostAPI?.startSession({
+      meetingName: `Call ${new Date().toLocaleTimeString()}`,
+      meetingContext: '',
+      callType: 'discovery', // Will be auto-detected
+      myRole: 'attending', // Safe default
+      participants: '',
+    });
+  }, []);
 
   const handlePreCallStart = useCallback(async (config: PreCallConfig) => {
     setShowPreCall(false);
