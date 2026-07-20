@@ -20,6 +20,10 @@ export interface ProcessedCall {
   cleanTranscript: CleanSegment[];
   /** Next steps */
   nextSteps: string[];
+  /** Follow-up email draft */
+  followUpEmail?: { subject: string; body: string };
+  /** New vocabulary/jargon introduced in this call */
+  vocabulary?: { term: string; definition: string }[];
   /** Processing metadata */
   processedAt: number;
 }
@@ -75,7 +79,7 @@ export class PostCallProcessor {
     // Step 1-3: Clean the transcript locally (no LLM needed)
     const cleaned = this.cleanTranscript(segments);
 
-    // Step 4: LLM analysis
+    // Step 4: LLM analysis (summary, topics, actions, email, vocabulary)
     const analysis = await this.analyzeWithLLM(cleaned, callType, durationMs, context);
 
     return {
@@ -144,12 +148,11 @@ export class PostCallProcessor {
     durationMs: number,
     context?: string
   ): Promise<Omit<ProcessedCall, 'cleanTranscript' | 'processedAt'>> {
-    // Build a condensed transcript for LLM (limit to ~5000 chars to fit context)
     const transcriptText = cleanSegments
       .map(s => `[${s.speakerName}]: ${s.text}`)
       .join('\n');
 
-    const truncatedTranscript = transcriptText.length > 5000
+    const truncated = transcriptText.length > 5000
       ? transcriptText.slice(0, 2500) + '\n\n[...middle section omitted...]\n\n' + transcriptText.slice(-2500)
       : transcriptText;
 
@@ -158,9 +161,9 @@ export class PostCallProcessor {
     const userPrompt = `Analyze this ${callType} call (${Math.round(durationMs / 60000)} minutes).
 ${context ? `Meeting context: ${context}\n` : ''}
 Transcript:
-${truncatedTranscript}
+${truncated}
 
-Produce a structured analysis. Be concise and specific.
+Produce a structured analysis including a follow-up email draft and any new vocabulary/jargon introduced.
 
 Respond with JSON:
 {
@@ -173,8 +176,17 @@ Respond with JSON:
     {"text": "What needs to be done", "owner": "who is responsible", "dueDate": "if mentioned, else null"}
   ],
   "keyTakeaways": ["Key point or decision 1", "Key point 2"],
-  "nextSteps": ["Next step 1", "Next step 2"]
-}`;
+  "nextSteps": ["Next step 1", "Next step 2"],
+  "followUpEmail": {
+    "subject": "Professional email subject line",
+    "body": "Full follow-up email body - concise, warm, professional. Reference what was discussed, list action items, and confirm next steps. Include greeting and sign-off."
+  },
+  "vocabulary": [
+    {"term": "New technical term or jargon introduced", "definition": "Brief explanation of what it means in context"}
+  ]
+}
+
+For vocabulary: only include terms that were NEW or EXPLAINED during this call. Skip common/obvious terms.`;
 
     try {
       const result = await this.llm.converseJSON<{
@@ -184,6 +196,8 @@ Respond with JSON:
         actionItems: { text: string; owner: string; dueDate?: string }[];
         keyTakeaways: string[];
         nextSteps: string[];
+        followUpEmail?: { subject: string; body: string };
+        vocabulary?: { term: string; definition: string }[];
       }>(systemPrompt, userPrompt);
 
       return {
@@ -193,6 +207,8 @@ Respond with JSON:
         actionItems: result?.actionItems ?? [],
         keyTakeaways: result?.keyTakeaways ?? [],
         nextSteps: result?.nextSteps ?? [],
+        followUpEmail: result?.followUpEmail,
+        vocabulary: result?.vocabulary ?? [],
       };
     } catch (err) {
       console.error('[PostCallProcessor] LLM analysis failed:', err);
@@ -203,6 +219,8 @@ Respond with JSON:
         actionItems: [],
         keyTakeaways: [],
         nextSteps: [],
+        followUpEmail: undefined,
+        vocabulary: [],
       };
     }
   }

@@ -1,5 +1,6 @@
 import { EventEmitter } from 'events';
 import { AudioCaptureService, AudioChunk } from './audio';
+import { AudioRecorder } from './audio/AudioRecorder';
 import { TranscriptionService, TranscriptSegment } from './transcription';
 import { SpeakerIdentifier } from './transcription/SpeakerIdentifier';
 import { CoachingService, CoachingSuggestion, SentimentAnalysis, TalkRatioData } from './coaching';
@@ -24,6 +25,7 @@ export type SessionState = 'idle' | 'initializing' | 'active' | 'error';
  */
 export class SessionOrchestrator extends EventEmitter {
   private audio: AudioCaptureService;
+  private recorder: AudioRecorder;
   private transcription: TranscriptionService;
   private coaching: CoachingService;
   private speakerIdentifier: SpeakerIdentifier;
@@ -53,6 +55,8 @@ export class SessionOrchestrator extends EventEmitter {
       channels: 1,
       bufferMs: 200,
     });
+
+    this.recorder = new AudioRecorder(16000, 1);
 
     this.transcription = new TranscriptionService(
       config.transcriptionMode ?? 'cloud',
@@ -128,11 +132,17 @@ export class SessionOrchestrator extends EventEmitter {
     }
 
     this.setState('active');
+    this.recorder.start();
     return true;
   }
 
   stop(): void {
     this.audio.stop();
+    // Save audio recording
+    const callId = `call-${this.callStartTime}`;
+    this.recorder.stop(callId).then(filePath => {
+      if (filePath) console.log(`[Orchestrator] Audio saved: ${filePath}`);
+    }).catch(() => {});
     this.autoSaveCall();
     this.setState('idle');
   }
@@ -194,6 +204,7 @@ export class SessionOrchestrator extends EventEmitter {
         console.log(`[Orchestrator] Audio chunk #${chunkCount}: source=${chunk.source}, active=${chunk.isActive}, len=${chunk.buffer.length}`);
       }
       this.transcription.processChunk(chunk);
+      this.recorder.addChunk(chunk);
     });
 
     this.audio.on('vad-change', (source: string, active: boolean) => {

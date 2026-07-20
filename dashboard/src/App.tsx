@@ -92,6 +92,16 @@ async function apiGet(path: string, token: string): Promise<any> {
   return res.json();
 }
 
+async function apiSearch(query: string, token: string): Promise<{ results: CallMeta[]; total: number }> {
+  const res = await fetch(`${API_URL}/search`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ query }),
+  });
+  if (!res.ok) throw new Error(`Search API error: ${res.status}`);
+  return res.json();
+}
+
 // === Theme ===
 const themes = {
   dark: { bg: '#0f0f1a', surface: '#1a1a2e', surfaceAlt: '#16213e', border: '#2a2a4a', text: '#f1f5f9', textSecondary: '#94a3b8', textMuted: '#64748b', accent: '#16db93', accentHover: '#12b87a', speakerYou: '#60a5fa', speakerOther: '#16db93', warning: '#f59e0b', danger: '#ef4444', barBg: '#2a2a4a', inputBg: '#0f0f1a' },
@@ -226,7 +236,7 @@ const App: React.FC = () => {
           </div>
         )}
         {view === 'login' && <AuthForm onAuth={handleAuth} onConfirm={cognitoConfirm} loading={loading} theme={t} />}
-        {view === 'list' && <CallList calls={calls} loading={loading} onOpen={openCall} onRefresh={loadCalls} theme={t} />}
+        {view === 'list' && <CallList calls={calls} loading={loading} onOpen={openCall} onRefresh={loadCalls} theme={t} token={token} />}
         {view === 'detail' && selectedCall && <CallDetail call={selectedCall} theme={t} />}
       </main>
     </div>
@@ -308,53 +318,235 @@ const AuthForm: React.FC<{
   );
 };
 
-// === Call List ===
-const CallList: React.FC<{ calls: CallMeta[]; loading: boolean; onOpen: (id: string) => void; onRefresh: () => void; theme: typeof themes.dark }> = ({ calls, loading, onOpen, onRefresh, theme: t }) => (
-  <div>
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
-      <h2 style={{ fontSize: '24px', fontWeight: 600 }}>Your Calls</h2>
-      <button onClick={onRefresh} style={{ fontSize: '14px', color: t.textSecondary, background: t.surfaceAlt, border: `1px solid ${t.border}`, borderRadius: '8px', padding: '8px 18px', cursor: 'pointer', fontWeight: 500 }}>
-        {loading ? 'Loading...' : 'Refresh'}
-      </button>
-    </div>
+// === Call List with Search & Insights ===
+type ListTab = 'calls' | 'insights';
 
-    {calls.length === 0 && !loading && (
-      <div style={{ textAlign: 'center', padding: '80px 0', color: t.textMuted }}>
-        <p style={{ fontSize: '18px', marginBottom: '8px' }}>No calls synced yet</p>
-        <p style={{ fontSize: '14px' }}>Start a capture in the K.I.R.A. desktop app — your calls will appear here automatically</p>
-      </div>
-    )}
+const CallList: React.FC<{ calls: CallMeta[]; loading: boolean; onOpen: (id: string) => void; onRefresh: () => void; theme: typeof themes.dark; token: string | null }> = ({ calls, loading, onOpen, onRefresh, theme: t, token }) => {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<CallMeta[] | null>(null);
+  const [searching, setSearching] = useState(false);
+  const [activeTab, setActiveTab] = useState<ListTab>('calls');
 
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-      {calls.map((call) => (
-        <div
-          key={call.callId}
-          onClick={() => onOpen(call.callId)}
-          style={{ padding: '24px', background: t.surface, border: `1px solid ${t.border}`, borderRadius: '12px', cursor: 'pointer', transition: 'border-color 0.15s, box-shadow 0.15s' }}
-          onMouseEnter={e => { e.currentTarget.style.borderColor = t.accent; e.currentTarget.style.boxShadow = `0 0 0 1px ${t.accent}30`; }}
-          onMouseLeave={e => { e.currentTarget.style.borderColor = t.border; e.currentTarget.style.boxShadow = 'none'; }}
-        >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-            <div>
-              <h3 style={{ fontSize: '17px', fontWeight: 600, marginBottom: '8px' }}>{call.callName}</h3>
-              <div style={{ display: 'flex', gap: '20px', fontSize: '14px', color: t.textMuted, flexWrap: 'wrap' }}>
-                <span>{new Date(call.callDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}</span>
-                <span>{Math.round(call.durationMs / 60000)} min</span>
-                <span style={{ textTransform: 'capitalize', background: t.surfaceAlt, padding: '2px 10px', borderRadius: '12px', fontSize: '12px', fontWeight: 500 }}>{call.callType}</span>
-                {call.participants && <span>{call.participants}</span>}
-              </div>
-            </div>
-            {call.score > 0 && (
-              <div style={{ fontSize: '24px', fontWeight: 700, color: call.score >= 80 ? t.accent : call.score >= 60 ? t.warning : t.danger }}>
-                {call.score}
-              </div>
-            )}
+  const handleSearch = async () => {
+    if (!searchQuery.trim()) { setSearchResults(null); return; }
+    // Local filter for instant results
+    const localFiltered = calls.filter(c =>
+      c.callName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      c.participants?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      c.callType.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+    setSearchResults(localFiltered);
+    // Also call API for cross-transcript search
+    if (token) {
+      setSearching(true);
+      try {
+        const data = await apiSearch(searchQuery, token);
+        if (data.results && data.results.length > 0) {
+          // Merge API results with local, dedup by callId
+          const merged = [...localFiltered];
+          data.results.forEach(r => {
+            if (!merged.find(m => m.callId === r.callId)) merged.push(r);
+          });
+          setSearchResults(merged);
+        }
+      } catch { /* keep local results */ }
+      finally { setSearching(false); }
+    }
+  };
+
+  const handleSearchKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') handleSearch();
+  };
+
+  const clearSearch = () => { setSearchQuery(''); setSearchResults(null); };
+
+  const displayCalls = searchResults ?? calls;
+
+  // Insights calculations
+  const totalCalls = calls.length;
+  const totalHours = calls.reduce((acc, c) => acc + c.durationMs, 0) / 3600000;
+  const avgTalkRatio = calls.filter(c => c.talkRatio).reduce((acc, c, _, arr) => acc + (c.talkRatio!.you / arr.length), 0);
+  const allTopics: Record<string, number> = {};
+  calls.forEach(c => {
+    if (c.callType) allTopics[c.callType] = (allTopics[c.callType] || 0) + 1;
+  });
+  const topTopics = Object.entries(allTopics).sort((a, b) => b[1] - a[1]).slice(0, 5);
+  const trainingCalls = calls.filter(c => c.callType === 'training');
+
+  const tabBtnStyle = (active: boolean): React.CSSProperties => ({
+    fontSize: '14px', fontWeight: 500, padding: '8px 18px', borderRadius: '8px', cursor: 'pointer', border: 'none',
+    background: active ? t.accent : t.surfaceAlt, color: active ? '#fff' : t.textSecondary, transition: 'all 0.15s',
+  });
+
+  if (activeTab === 'insights') {
+    return (
+      <div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
+          <h2 style={{ fontSize: '24px', fontWeight: 600 }}>Insights</h2>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button onClick={() => setActiveTab('calls')} style={tabBtnStyle(false)}>Calls</button>
+            <button onClick={() => setActiveTab('insights')} style={tabBtnStyle(true)}>Insights</button>
           </div>
         </div>
-      ))}
+
+        {/* Summary Stats */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '24px' }}>
+          <div style={{ background: t.surface, border: `1px solid ${t.border}`, borderRadius: '12px', padding: '20px', textAlign: 'center' }}>
+            <div style={{ fontSize: '28px', fontWeight: 700, color: t.accent }}>{totalCalls}</div>
+            <div style={{ fontSize: '13px', color: t.textMuted, marginTop: '4px' }}>Total Calls</div>
+          </div>
+          <div style={{ background: t.surface, border: `1px solid ${t.border}`, borderRadius: '12px', padding: '20px', textAlign: 'center' }}>
+            <div style={{ fontSize: '28px', fontWeight: 700, color: t.accent }}>{totalHours.toFixed(1)}</div>
+            <div style={{ fontSize: '13px', color: t.textMuted, marginTop: '4px' }}>Hours Transcribed</div>
+          </div>
+          <div style={{ background: t.surface, border: `1px solid ${t.border}`, borderRadius: '12px', padding: '20px', textAlign: 'center' }}>
+            <div style={{ fontSize: '28px', fontWeight: 700, color: t.accent }}>{Math.round(avgTalkRatio)}%</div>
+            <div style={{ fontSize: '13px', color: t.textMuted, marginTop: '4px' }}>Avg Talk Ratio (You)</div>
+          </div>
+        </div>
+
+        {/* Top Topics */}
+        <div style={{ background: t.surface, border: `1px solid ${t.border}`, borderRadius: '12px', padding: '20px 24px', marginBottom: '24px' }}>
+          <h4 style={{ fontSize: '13px', fontWeight: 600, color: t.textMuted, marginBottom: '14px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Most Discussed Topics</h4>
+          {topTopics.length === 0 ? (
+            <p style={{ fontSize: '14px', color: t.textMuted }}>No topic data yet</p>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {topTopics.map(([topic, count]) => (
+                <div key={topic} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <span style={{ fontSize: '14px', fontWeight: 500, color: t.text, textTransform: 'capitalize', minWidth: '120px' }}>{topic}</span>
+                  <div style={{ flex: 1, height: '8px', background: t.barBg, borderRadius: '4px', overflow: 'hidden' }}>
+                    <div style={{ width: `${(count / totalCalls) * 100}%`, height: '100%', background: t.accent, borderRadius: '4px' }} />
+                  </div>
+                  <span style={{ fontSize: '13px', color: t.textMuted, minWidth: '30px', textAlign: 'right' }}>{count}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Open Action Items */}
+        <div style={{ background: t.surface, border: `1px solid ${t.accent}30`, borderRadius: '12px', padding: '20px 24px', marginBottom: '24px' }}>
+          <h4 style={{ fontSize: '13px', fontWeight: 600, color: t.accent, marginBottom: '14px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Action Items (All Calls)</h4>
+          <p style={{ fontSize: '14px', color: t.textMuted }}>Open call details to view action items per call. Aggregate tracking available when call data includes processed action items.</p>
+        </div>
+
+        {/* Training Progress (Task 4) */}
+        <div style={{ background: t.surface, border: `1px solid ${t.border}`, borderRadius: '12px', padding: '20px 24px' }}>
+          <h4 style={{ fontSize: '13px', fontWeight: 600, color: t.textMuted, marginBottom: '14px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Training Progress</h4>
+          {trainingCalls.length === 0 ? (
+            <p style={{ fontSize: '14px', color: t.textMuted }}>No training sessions recorded yet</p>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {trainingCalls.map((tc) => (
+                <div key={tc.callId} style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '12px', background: t.surfaceAlt, borderRadius: '8px' }}>
+                  <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: t.accent, flexShrink: 0 }} />
+                  <div style={{ flex: 1 }}>
+                    <span style={{ fontSize: '14px', fontWeight: 500, color: t.text }}>{tc.callName}</span>
+                    <div style={{ fontSize: '12px', color: t.textMuted, marginTop: '2px' }}>
+                      {new Date(tc.callDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
+                      {' · '}{Math.round(tc.durationMs / 60000)} min
+                      {tc.participants && ` · ${tc.participants}`}
+                    </div>
+                  </div>
+                </div>
+              ))}
+              {/* Timeline visualization */}
+              <div style={{ marginTop: '12px', padding: '12px', background: t.surfaceAlt, borderRadius: '8px' }}>
+                <span style={{ fontSize: '12px', color: t.textMuted, display: 'block', marginBottom: '8px' }}>Timeline ({trainingCalls.length} sessions)</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  {trainingCalls.map((tc, i) => (
+                    <div key={tc.callId} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                      <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: t.accent }} />
+                      {i < trainingCalls.length - 1 && <div style={{ width: '100%', height: '2px', background: t.accent, marginTop: '-5px' }} />}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+        <h2 style={{ fontSize: '24px', fontWeight: 600 }}>Your Calls</h2>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <button onClick={() => setActiveTab('calls')} style={tabBtnStyle(true)}>Calls</button>
+          <button onClick={() => setActiveTab('insights')} style={tabBtnStyle(false)}>Insights</button>
+          <button onClick={onRefresh} style={{ fontSize: '14px', color: t.textSecondary, background: t.surfaceAlt, border: `1px solid ${t.border}`, borderRadius: '8px', padding: '8px 18px', cursor: 'pointer', fontWeight: 500 }}>
+            {loading ? 'Loading...' : 'Refresh'}
+          </button>
+        </div>
+      </div>
+
+      {/* Search Bar */}
+      <div style={{ marginBottom: '24px', display: 'flex', gap: '8px' }}>
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={e => setSearchQuery(e.target.value)}
+          onKeyDown={handleSearchKeyDown}
+          placeholder="Search calls by name, participant, or transcript..."
+          style={{ flex: 1, padding: '12px 16px', background: t.inputBg, border: `1px solid ${t.border}`, borderRadius: '8px', color: t.text, fontSize: '14px', outline: 'none' }}
+        />
+        <button onClick={handleSearch} style={{ padding: '12px 20px', background: t.accent, color: '#fff', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: 500, cursor: 'pointer' }}>
+          {searching ? 'Searching...' : 'Search'}
+        </button>
+        {searchResults && (
+          <button onClick={clearSearch} style={{ padding: '12px 16px', background: t.surfaceAlt, color: t.textSecondary, border: `1px solid ${t.border}`, borderRadius: '8px', fontSize: '14px', cursor: 'pointer' }}>
+            Clear
+          </button>
+        )}
+      </div>
+
+      {searchResults && (
+        <div style={{ marginBottom: '16px', fontSize: '14px', color: t.textMuted }}>
+          {searchResults.length} result{searchResults.length !== 1 ? 's' : ''} for "{searchQuery}"
+        </div>
+      )}
+
+      {displayCalls.length === 0 && !loading && (
+        <div style={{ textAlign: 'center', padding: '80px 0', color: t.textMuted }}>
+          <p style={{ fontSize: '18px', marginBottom: '8px' }}>{searchResults ? 'No matching calls found' : 'No calls synced yet'}</p>
+          <p style={{ fontSize: '14px' }}>{searchResults ? 'Try a different search term' : 'Start a capture in the K.I.R.A. desktop app — your calls will appear here automatically'}</p>
+        </div>
+      )}
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        {displayCalls.map((call) => (
+          <div
+            key={call.callId}
+            onClick={() => onOpen(call.callId)}
+            style={{ padding: '24px', background: t.surface, border: `1px solid ${t.border}`, borderRadius: '12px', cursor: 'pointer', transition: 'border-color 0.15s, box-shadow 0.15s' }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = t.accent; e.currentTarget.style.boxShadow = `0 0 0 1px ${t.accent}30`; }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = t.border; e.currentTarget.style.boxShadow = 'none'; }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <div>
+                <h3 style={{ fontSize: '17px', fontWeight: 600, marginBottom: '8px' }}>{call.callName}</h3>
+                <div style={{ display: 'flex', gap: '20px', fontSize: '14px', color: t.textMuted, flexWrap: 'wrap' }}>
+                  <span>{new Date(call.callDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}</span>
+                  <span>{Math.round(call.durationMs / 60000)} min</span>
+                  <span style={{ textTransform: 'capitalize', background: t.surfaceAlt, padding: '2px 10px', borderRadius: '12px', fontSize: '12px', fontWeight: 500 }}>{call.callType}</span>
+                  {call.participants && <span>{call.participants}</span>}
+                </div>
+              </div>
+              {call.score > 0 && (
+                <div style={{ fontSize: '24px', fontWeight: 700, color: call.score >= 80 ? t.accent : call.score >= 60 ? t.warning : t.danger }}>
+                  {call.score}
+                </div>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 // === Call Detail ===
 const CallDetail: React.FC<{ call: CallFull; theme: typeof themes.dark }> = ({ call, theme: t }) => {

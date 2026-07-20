@@ -91,9 +91,8 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onAuthenticated }) => {
       <div className="w-full max-w-xs">
         {/* Logo */}
         <div className="text-center mb-6">
-          <span className="text-ghost-accent text-3xl font-bold">✦</span>
-          <h1 className="text-lg font-semibold text-ghost-text mt-2">K.I.R.A.</h1>
-          <p className="text-[10px] text-ghost-text-dim mt-1">Knowledge, Insights & Response Assistant</p>
+          <h1 className="text-xl font-bold text-ghost-accent mt-2">K.I.R.A.</h1>
+          <p className="text-[12px] text-ghost-text-dim mt-1">Knowledge, Insights & Response Assistant</p>
         </div>
 
         {/* Error message */}
@@ -107,7 +106,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onAuthenticated }) => {
         {mode === 'login' && (
           <form onSubmit={handleLogin} className="space-y-3">
             <div>
-              <label className="text-[10px] text-ghost-text-dim block mb-1">Email</label>
+              <label className="text-[12px] text-ghost-text-dim block mb-1">Email</label>
               <input
                 type="email"
                 value={email}
@@ -118,7 +117,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onAuthenticated }) => {
               />
             </div>
             <div>
-              <label className="text-[10px] text-ghost-text-dim block mb-1">Password</label>
+              <label className="text-[12px] text-ghost-text-dim block mb-1">Password</label>
               <input
                 type="password"
                 value={password}
@@ -135,7 +134,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onAuthenticated }) => {
             >
               {loading ? 'Signing in...' : 'Sign In'}
             </button>
-            <p className="text-center text-[10px] text-ghost-text-dim">
+            <p className="text-center text-[12px] text-ghost-text-dim">
               No account?{' '}
               <button type="button" onClick={() => { setMode('signup'); setError(null); }} className="text-ghost-accent hover:underline">
                 Sign up
@@ -148,7 +147,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onAuthenticated }) => {
         {mode === 'signup' && (
           <form onSubmit={handleSignUp} className="space-y-3">
             <div>
-              <label className="text-[10px] text-ghost-text-dim block mb-1">Email</label>
+              <label className="text-[12px] text-ghost-text-dim block mb-1">Email</label>
               <input
                 type="email"
                 value={email}
@@ -159,7 +158,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onAuthenticated }) => {
               />
             </div>
             <div>
-              <label className="text-[10px] text-ghost-text-dim block mb-1">Password</label>
+              <label className="text-[12px] text-ghost-text-dim block mb-1">Password</label>
               <input
                 type="password"
                 value={password}
@@ -177,7 +176,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onAuthenticated }) => {
             >
               {loading ? 'Creating account...' : 'Create Account'}
             </button>
-            <p className="text-center text-[10px] text-ghost-text-dim">
+            <p className="text-center text-[12px] text-ghost-text-dim">
               Already have an account?{' '}
               <button type="button" onClick={() => { setMode('login'); setError(null); }} className="text-ghost-accent hover:underline">
                 Sign in
@@ -193,7 +192,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onAuthenticated }) => {
               We sent a verification code to <span className="text-ghost-text">{pendingEmail}</span>
             </p>
             <div>
-              <label className="text-[10px] text-ghost-text-dim block mb-1">Verification Code</label>
+              <label className="text-[12px] text-ghost-text-dim block mb-1">Verification Code</label>
               <input
                 type="text"
                 value={confirmCode}
@@ -210,7 +209,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onAuthenticated }) => {
             >
               {loading ? 'Verifying...' : 'Verify & Sign In'}
             </button>
-            <p className="text-center text-[10px] text-ghost-text-dim">
+            <p className="text-center text-[12px] text-ghost-text-dim">
               <button type="button" onClick={() => { setMode('login'); setError(null); }} className="text-ghost-accent hover:underline">
                 Back to sign in
               </button>
@@ -222,7 +221,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onAuthenticated }) => {
         <div className="mt-4 text-center">
           <button
             onClick={onAuthenticated}
-            className="text-[10px] text-ghost-text-dim/60 hover:text-ghost-text-dim"
+            className="text-[12px] text-ghost-text-dim/60 hover:text-ghost-text-dim"
           >
             Skip for now (offline mode)
           </button>

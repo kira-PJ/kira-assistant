@@ -11,21 +11,21 @@ const priorityColors = {
   low: 'border-l-ghost-text-dim',
 };
 
-const typeIcons = {
-  question: '❓',
-  answer: '💬',
-  context: '📖',
-  sentiment: '😊',
-  action: '✅',
+const typeLabels: Record<string, string> = {
+  question: 'Suggested Question',
+  answer: 'Answer Help',
+  context: 'Context',
+  sentiment: 'Sentiment',
+  action: 'Insight',
 };
 
 const SuggestionsPanel: React.FC<SuggestionsPanelProps> = ({ suggestions }) => {
   if (suggestions.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-ghost-text-dim">
-        <span className="text-3xl mb-2">💡</span>
-        <p className="text-sm">AI suggestions will appear here during calls</p>
-        <p className="text-xs mt-1">Start capturing to activate coaching</p>
+        <p className="text-[14px] font-medium">AI coaching suggestions</p>
+        <p className="text-[13px] mt-2">Suggestions will appear here during active calls</p>
+        <p className="text-[13px] mt-1 text-ghost-text-dim/60">Based on what's being discussed — questions to ask, answers to give, context lookups</p>
       </div>
     );
   }
@@ -35,27 +35,20 @@ const SuggestionsPanel: React.FC<SuggestionsPanelProps> = ({ suggestions }) => {
       {suggestions.map((suggestion) => (
         <div
           key={suggestion.id}
-          className={`bg-ghost-surface border-l-2 ${priorityColors[suggestion.priority]} rounded-r-md p-2.5`}
+          className={`bg-ghost-surface border-l-2 ${priorityColors[suggestion.priority]} rounded-r-md p-3`}
         >
-          <div className="flex items-center gap-1.5 mb-1">
-            <span className="text-xs">{typeIcons[suggestion.type]}</span>
-            <span className="text-xs font-semibold text-ghost-text">{suggestion.title}</span>
-            <span className="ml-auto text-[9px] text-ghost-text-dim">
+          <div className="flex items-center gap-2 mb-1.5">
+            <span className="text-[13px] font-semibold text-ghost-accent uppercase tracking-wide">
+              {typeLabels[suggestion.type] ?? suggestion.type}
+            </span>
+            <span className="text-[12px] text-ghost-text-dim ml-auto">
               {new Date(suggestion.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
             </span>
           </div>
-          <p className="text-xs text-ghost-text-dim leading-relaxed whitespace-pre-wrap">
+          <p className="text-[13px] font-medium text-ghost-text mb-1">{suggestion.title}</p>
+          <p className="text-[13px] text-ghost-text-dim leading-relaxed whitespace-pre-wrap">
             {suggestion.content}
           </p>
-          {suggestion.sources && suggestion.sources.length > 0 && (
-            <div className="mt-1.5 flex gap-1">
-              {suggestion.sources.map((src, i) => (
-                <span key={i} className="text-[10px] text-ghost-accent hover:underline cursor-pointer">
-                  [Source {i + 1}]
-                </span>
-              ))}
-            </div>
-          )}
         </div>
       ))}
     </div>

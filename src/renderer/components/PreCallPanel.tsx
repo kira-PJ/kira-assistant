@@ -40,6 +40,7 @@ const PreCallPanel: React.FC<PreCallPanelProps> = ({ onStart, onCancel }) => {
   const [devices, setDevices] = useState<AudioDevice[]>([]);
   const [micDevice, setMicDevice] = useState('');
   const [systemDevice, setSystemDevice] = useState('');
+  const [previousContext, setPreviousContext] = useState<{ callName: string; callDate: string; topics: string; actionItems: string; participant: string } | null>(null);
 
   useEffect(() => {
     // Load available audio devices
@@ -47,6 +48,37 @@ const PreCallPanel: React.FC<PreCallPanelProps> = ({ onStart, onCancel }) => {
       setDevices(devs ?? []);
     });
   }, []);
+
+  // Search previous calls when participant name changes
+  useEffect(() => {
+    if (!participants.trim()) { setPreviousContext(null); return; }
+    const searchParticipants = async () => {
+      try {
+        const savedCalls = await window.ghostAPI?.listSavedCalls?.();
+        if (!savedCalls || savedCalls.length === 0) return;
+        const name = participants.split(',')[0].replace(/\(.*?\)/g, '').trim().toLowerCase();
+        if (!name) return;
+        const match = savedCalls.find((c: any) =>
+          c.participants?.toLowerCase().includes(name)
+        );
+        if (match) {
+          const topics = match.processed?.topics?.map((t: any) => t.name).join(', ') || match.callType || '';
+          const actionItems = match.processed?.actionItems?.map((a: any) => a.text).join('; ') || '';
+          setPreviousContext({
+            participant: name,
+            callName: match.callName || match.processed?.title || 'Untitled',
+            callDate: match.callDate ? new Date(match.callDate).toLocaleDateString() : '',
+            topics,
+            actionItems,
+          });
+        } else {
+          setPreviousContext(null);
+        }
+      } catch { setPreviousContext(null); }
+    };
+    const timeout = setTimeout(searchParticipants, 500);
+    return () => clearTimeout(timeout);
+  }, [participants]);
 
   const micDevices = devices.filter(d => !d.isMonitor);
   const systemDevices = devices.filter(d => d.isMonitor);
@@ -153,7 +185,17 @@ const PreCallPanel: React.FC<PreCallPanelProps> = ({ onStart, onCancel }) => {
         />
       </div>
 
-      {/* Audio devices — always show */}
+      {/* Previous Context */}
+      {previousContext && (
+        <div className="bg-ghost-accent/5 border border-ghost-accent/20 rounded p-2.5">
+          <span className="text-[11px] font-semibold text-ghost-accent uppercase tracking-wide block mb-1">Previous Context</span>
+          <p className="text-xs text-ghost-text leading-relaxed">
+            Previous call with <span className="font-medium">{previousContext.participant}</span>: {previousContext.callName} on {previousContext.callDate}.
+            {previousContext.topics && <> Topics: {previousContext.topics}.</>}
+            {previousContext.actionItems && <> Action items: {previousContext.actionItems}</>}
+          </p>
+        </div>
+      )}
       <div>
         <label className="text-[13px] text-ghost-text-dim block mb-1 font-medium">Audio Devices</label>
         {devices.length === 0 ? (
