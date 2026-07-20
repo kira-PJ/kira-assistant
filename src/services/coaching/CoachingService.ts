@@ -37,7 +37,7 @@ export class CoachingService extends EventEmitter {
   private processingLock = false;
   private lastSegmentTime = 0;
   private silenceTimer: ReturnType<typeof setTimeout> | null = null;
-  private silenceThresholdMs = 8000; // 8s of silence triggers suggestion
+  private silenceThresholdMs = 15000; // 15s of silence triggers suggestion (was 8s — too noisy)
   private lastSummaryTime = 0;
   private summaryInterval = 300000; // 5 minutes between summaries
   private meetingContext: { name?: string; context?: string; myRole?: string; participants?: string } = {};
@@ -210,21 +210,32 @@ Respond with JSON:
 
   private async maybeRunPeriodicChecks(segment: TranscriptSegment): Promise<void> {
     const now = Date.now();
-    if (now - this.lastSuggestionTime < this.minSuggestionInterval) return;
+    // Minimum 15 seconds between any AI suggestions (was 5s — too noisy)
+    if (now - this.lastSuggestionTime < 15000) return;
     if (this.processingLock) return;
 
     this.processingLock = true;
     this.lastSuggestionTime = now;
 
     try {
-      // Run sentiment analysis every 3 segments (not 5)
-      if (this.segments.length >= 3 && this.segments.length % 3 === 0) {
+      // Sentiment analysis: every 8 segments (not 3 — less noise)
+      if (this.segments.length >= 5 && this.segments.length % 8 === 0) {
         await this.runSentimentAnalysis();
       }
 
-      // Question suggestions — less often for training (you're listening), more for discovery
-      const questionInterval = this.callType === 'training' ? 8 : 5;
-      if (this.segments.length >= 3 && this.segments.length % questionInterval === 0) {
+      // Question suggestions — only when meaningful:
+      // Training: every 12 segments (you're mostly listening)
+      // Discovery/negotiation: every 8 segments (you need to drive)
+      // Others: every 10 segments
+      const questionInterval = this.callType === 'training' ? 12
+        : (this.callType === 'discovery' || this.callType === 'negotiation') ? 8
+        : 10;
+
+      // Only suggest if the other person has spoken enough to warrant a response
+      const recentOtherSegments = this.segments.slice(-questionInterval).filter(s => s.speaker === 'other');
+      const hasEnoughContext = recentOtherSegments.length >= 3;
+
+      if (this.segments.length >= 5 && this.segments.length % questionInterval === 0 && hasEnoughContext) {
         await this.runQuestionSuggestions();
       }
     } catch (err) {

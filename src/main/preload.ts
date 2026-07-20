@@ -56,6 +56,18 @@ contextBridge.exposeInMainWorld('ghostAPI', {
   switchLLMProvider: (provider: string, apiKey?: string) => ipcRenderer.invoke('switch-llm-provider', provider, apiKey),
   getLLMProvider: () => ipcRenderer.invoke('get-llm-provider'),
 
+  // === Post-call events ===
+  onPostCallStatus: (callback: (status: string) => void) => {
+    const handler = (_event: any, status: string) => callback(status);
+    ipcRenderer.on('post-call-status', handler);
+    return () => ipcRenderer.removeListener('post-call-status', handler);
+  },
+  onPostCallResult: (callback: (result: any) => void) => {
+    const handler = (_event: any, result: any) => callback(result);
+    ipcRenderer.on('post-call-result', handler);
+    return () => ipcRenderer.removeListener('post-call-result', handler);
+  },
+
   // === Auth ===
   authSignIn: (email: string, password: string) => ipcRenderer.invoke('auth-sign-in', email, password),
   authSignUp: (email: string, password: string) => ipcRenderer.invoke('auth-sign-up', email, password),

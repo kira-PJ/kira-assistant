@@ -92,6 +92,14 @@ function createOrchestrator(): SessionOrchestrator {
     mainWindow?.webContents.send('sync-status', status);
   });
 
+  orch.on('post-call-status', (status) => {
+    mainWindow?.webContents.send('post-call-status', status);
+  });
+
+  orch.on('post-call-result', (result) => {
+    mainWindow?.webContents.send('post-call-result', result);
+  });
+
   return orch;
 }
 

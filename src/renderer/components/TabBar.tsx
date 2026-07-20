@@ -9,9 +9,9 @@ interface TabBarProps {
 const tabs: { id: TabId; label: string }[] = [
   { id: 'transcript', label: 'Transcript' },
   { id: 'suggestions', label: 'Coach' },
-  { id: 'context', label: 'Context' },
+  { id: 'summary', label: 'Summary' },
   { id: 'metrics', label: 'Metrics' },
-  { id: 'actions', label: 'Actions' },
+  { id: 'context', label: 'Context' },
   { id: 'history', label: 'History' },
 ];
 

@@ -153,17 +153,19 @@ const PreCallPanel: React.FC<PreCallPanelProps> = ({ onStart, onCancel }) => {
         />
       </div>
 
-      {/* Audio devices */}
-      {devices.length > 0 && (
-        <div>
-          <label className="text-xs text-ghost-text-dim block mb-1">Audio Devices</label>
+      {/* Audio devices — always show */}
+      <div>
+        <label className="text-[13px] text-ghost-text-dim block mb-1 font-medium">Audio Devices</label>
+        {devices.length === 0 ? (
+          <p className="text-xs text-ghost-text-dim/60">Using system defaults (no devices detected via API)</p>
+        ) : (
           <div className="space-y-2">
             <div>
-              <span className="text-[10px] text-ghost-text-dim">Microphone</span>
+              <span className="text-xs text-ghost-text-dim">Microphone (your voice)</span>
               <select
                 value={micDevice}
                 onChange={(e) => setMicDevice(e.target.value)}
-                className="w-full mt-0.5 px-2 py-1 bg-ghost-bg border border-ghost-border text-ghost-text text-[10px] rounded"
+                className="w-full mt-0.5 px-2 py-1.5 bg-ghost-bg border border-ghost-border text-ghost-text text-xs rounded"
               >
                 <option value="">System Default</option>
                 {micDevices.map((d) => (
@@ -172,11 +174,11 @@ const PreCallPanel: React.FC<PreCallPanelProps> = ({ onStart, onCancel }) => {
               </select>
             </div>
             <div>
-              <span className="text-[10px] text-ghost-text-dim">System Audio (other speakers)</span>
+              <span className="text-xs text-ghost-text-dim">System Audio (other speakers)</span>
               <select
                 value={systemDevice}
                 onChange={(e) => setSystemDevice(e.target.value)}
-                className="w-full mt-0.5 px-2 py-1 bg-ghost-bg border border-ghost-border text-ghost-text text-[10px] rounded"
+                className="w-full mt-0.5 px-2 py-1.5 bg-ghost-bg border border-ghost-border text-ghost-text text-xs rounded"
               >
                 <option value="">System Default Monitor</option>
                 {systemDevices.map((d) => (
@@ -185,8 +187,8 @@ const PreCallPanel: React.FC<PreCallPanelProps> = ({ onStart, onCancel }) => {
               </select>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Action buttons */}
       <div className="flex gap-2 pt-2">

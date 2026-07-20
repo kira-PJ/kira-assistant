@@ -38,7 +38,12 @@ Call duration: ${Math.round(context.callDurationMs / 60000)} minutes
 Recent transcript:
 ${context.recentTranscript}
 
-IMPORTANT: The question must directly relate to something specific just said in the transcript. Do NOT suggest generic questions.
+IMPORTANT RULES:
+- The question MUST directly relate to something specific just said in the last few exchanges
+- Do NOT suggest generic questions or anything that was already answered
+- If there is nothing genuinely useful to ask right now, respond with an empty questions array: {"questions": []}
+- Only suggest a question if it would meaningfully advance understanding or uncover important info
+- Quality over quantity — silence is better than a bad suggestion
 
 Respond with JSON:
 {
