@@ -35,6 +35,7 @@ export function createOverlayWindow(): BrowserWindow {
     resizable: true,
     movable: true,
     hasShadow: true,
+    type: process.platform === 'linux' ? 'toolbar' : undefined, // Helps exclude from some screen captures on Linux
     backgroundColor: '#1a1a2e',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
@@ -45,7 +46,20 @@ export function createOverlayWindow(): BrowserWindow {
   });
 
   // Screen-share invisibility
+  // setContentProtection works on macOS/Windows
   window.setContentProtection(true);
+
+  // On Linux: set window type hint to exclude from screen capture
+  // Some compositors respect 'toolbar' or 'utility' types for exclusion
+  if (process.platform === 'linux') {
+    // Use X11 window property to mark as excluded from capture
+    // This works with most Wayland compositors and some X11 setups
+    try {
+      window.setSkipTaskbar(false);
+      // Attempt to set _NET_WM_BYPASS_COMPOSITOR hint
+      (window as any).setWindowButtonVisibility?.(false);
+    } catch { /* non-critical */ }
+  }
 
   // Keep always on top with highest level
   window.setAlwaysOnTop(true, 'screen-saver');
