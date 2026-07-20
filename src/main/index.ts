@@ -252,25 +252,51 @@ app.whenReady().then(async () => {
     if (!orchestrator) return { success: false, error: 'Orchestrator not ready' };
 
     // Auto-fix PulseAudio routing on Linux
-    // If user selected a monitor source, ensure the corresponding sink is default
-    if (process.platform === 'linux' && sessionConfig.systemDevice) {
+    // Ensures ALL audio goes through the selected output so the monitor captures it
+    if (process.platform === 'linux') {
       try {
         const { execSync } = require('child_process');
-        const selectedMonitor = sessionConfig.systemDevice;
-        // Monitor sources are named like "sink_name.monitor" — extract the sink name
-        const sinkName = selectedMonitor.replace('.monitor', '');
-        execSync(`pactl set-default-sink ${sinkName}`, { timeout: 3000 });
-        log.info('Auto-set PulseAudio default sink', { sink: sinkName });
-      } catch {
-        // Non-critical — user may have already set it correctly
+
+        // Determine the correct sink
+        let targetSink = '';
+        if (sessionConfig.systemDevice) {
+          targetSink = sessionConfig.systemDevice.replace('.monitor', '');
+        } else {
+          // No specific device selected — find the bluetooth sink if connected, else default
+          const sinks = execSync('pactl list short sinks', { timeout: 3000 }).toString();
+          const bluezLine = sinks.split('\n').find((l: string) => l.includes('bluez') && l.includes('RUNNING'));
+          if (bluezLine) {
+            targetSink = bluezLine.split('\t')[1];
+          }
+        }
+
+        if (targetSink) {
+          // 1. Set as default sink (new apps will use this)
+          execSync(`pactl set-default-sink ${targetSink}`, { timeout: 3000 });
+
+          // 2. Move ALL existing audio streams to this sink
+          //    This catches Chrome/Zoom that already connected to the wrong output
+          try {
+            const inputs = execSync('pactl list short sink-inputs', { timeout: 3000 }).toString();
+            const inputIds = inputs.split('\n')
+              .filter((l: string) => l.trim())
+              .map((l: string) => l.split('\t')[0]);
+            for (const id of inputIds) {
+              execSync(`pactl move-sink-input ${id} ${targetSink}`, { timeout: 2000 });
+            }
+            log.info('Audio routing fixed', { sink: targetSink, movedStreams: inputIds.length });
+          } catch {
+            log.info('Auto-set default sink (no streams to move)', { sink: targetSink });
+          }
+        }
+
+        // Also set default source if mic selected
+        if (sessionConfig.micDevice) {
+          execSync(`pactl set-default-source ${sessionConfig.micDevice}`, { timeout: 3000 });
+        }
+      } catch (err: any) {
+        log.warn('Audio routing fix failed', { error: err?.message?.slice(0, 100) });
       }
-    }
-    // Also set default source if mic selected
-    if (process.platform === 'linux' && sessionConfig.micDevice) {
-      try {
-        const { execSync } = require('child_process');
-        execSync(`pactl set-default-source ${sessionConfig.micDevice}`, { timeout: 3000 });
-      } catch { /* non-critical */ }
     }
 
     // Store meeting context for AI coaching
