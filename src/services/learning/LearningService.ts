@@ -29,6 +29,34 @@ export interface LearnedFAQ {
 }
 
 /**
+ * AnswerPattern — Extracted from how a skilled person answered a question.
+ * Used to coach the user in future calls when similar questions arise.
+ */
+export interface AnswerPattern {
+  id: string;
+  /** The question that was asked */
+  question: string;
+  /** Who answered it well */
+  answeredBy: string;
+  /** The full answer text */
+  answerText: string;
+  /** Extracted structure: what made this answer good */
+  structure: {
+    approach: string;    // How they opened (e.g., "acknowledged the question, then...")
+    keyPoints: string[]; // Main points they covered
+    technique: string;   // Technique used (analogy, example, step-by-step, etc.)
+    tone: string;        // Professional, casual, empathetic, etc.
+  };
+  /** Context: what call type and topic this was in */
+  callType: string;
+  topic: string;
+  /** When this was learned */
+  timestamp: number;
+  /** How many times this pattern has been used for coaching */
+  timesReferenced: number;
+}
+
+/**
  * LearningService - Adaptive personalization engine
  *
  * Tracks:
@@ -43,6 +71,7 @@ export class LearningService extends EventEmitter {
   private feedback: FeedbackEntry[] = [];
   private profile: UserProfile;
   private faqs: LearnedFAQ[] = [];
+  private answerPatterns: AnswerPattern[] = [];
   private dataPath: string;
 
   constructor() {
@@ -154,6 +183,57 @@ export class LearningService extends EventEmitter {
   }
 
   /**
+   * Learn from how someone else answered a question.
+   * Extracts the pattern so future coaching can say:
+   * "Here's how [person] handled a similar question before..."
+   */
+  addAnswerPattern(pattern: Omit<AnswerPattern, 'id' | 'timestamp' | 'timesReferenced'>): void {
+    const entry: AnswerPattern = {
+      ...pattern,
+      id: `ap-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      timestamp: Date.now(),
+      timesReferenced: 0,
+    };
+    this.answerPatterns.push(entry);
+    this.emit('pattern-learned', entry);
+    this.persistData();
+  }
+
+  /**
+   * Get answer patterns relevant to a question/topic.
+   * Used by the coaching system to reference past good answers.
+   */
+  getRelevantPatterns(question: string, callType?: string, limit = 3): AnswerPattern[] {
+    const terms = question.toLowerCase().split(/\s+/).filter(t => t.length > 3);
+
+    return this.answerPatterns
+      .map(pattern => {
+        const searchable = `${pattern.question} ${pattern.topic} ${pattern.structure.keyPoints.join(' ')}`.toLowerCase();
+        let score = 0;
+        for (const term of terms) {
+          if (searchable.includes(term)) score++;
+        }
+        // Boost score if same call type
+        if (callType && pattern.callType === callType) score += 2;
+        return { pattern, score };
+      })
+      .filter(r => r.score > 0)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, limit)
+      .map(r => {
+        r.pattern.timesReferenced++;
+        return r.pattern;
+      });
+  }
+
+  /**
+   * Get all stored answer patterns (for display/export)
+   */
+  getAllPatterns(): AnswerPattern[] {
+    return [...this.answerPatterns];
+  }
+
+  /**
    * Get suggestion effectiveness stats
    */
   getSuggestionStats(): Record<string, { total: number; positive: number; rate: number }> {
@@ -253,6 +333,11 @@ export class LearningService extends EventEmitter {
     } catch { /* empty */ }
 
     try {
+      const patternData = await fs.readFile(path.join(this.dataPath, 'answer-patterns.json'), 'utf-8');
+      this.answerPatterns = JSON.parse(patternData);
+    } catch { /* empty */ }
+
+    try {
       const profileData = await fs.readFile(path.join(this.dataPath, 'profile.json'), 'utf-8');
       const parsed = JSON.parse(profileData);
       this.profile = {
@@ -271,6 +356,10 @@ export class LearningService extends EventEmitter {
       await fs.writeFile(
         path.join(this.dataPath, 'faqs.json'),
         JSON.stringify(this.faqs)
+      );
+      await fs.writeFile(
+        path.join(this.dataPath, 'answer-patterns.json'),
+        JSON.stringify(this.answerPatterns.slice(-100)) // Keep last 100 patterns
       );
       await fs.writeFile(
         path.join(this.dataPath, 'profile.json'),

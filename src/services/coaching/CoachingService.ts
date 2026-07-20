@@ -3,6 +3,7 @@ import { TranscriptSegment } from '../transcription/types';
 import { ILLMClient, LLMClientOptions, LLMProvider, createLLMClient } from './LLMClient';
 import { TriggerDetector } from './TriggerDetector';
 import { PromptTemplates } from './PromptTemplates';
+import { LearningService, AnswerPattern } from '../learning/LearningService';
 import {
   CallType,
   CoachingContext,
@@ -24,6 +25,7 @@ export class CoachingService extends EventEmitter {
   private llm: ILLMClient;
   private llmOptions: LLMClientOptions;
   private detector: TriggerDetector;
+  private learning: LearningService;
   private callType: CallType = 'discovery';
   private segments: TranscriptSegment[] = [];
   private suggestions: CoachingSuggestion[] = [];
@@ -60,6 +62,8 @@ export class CoachingService extends EventEmitter {
     };
     this.llm = createLLMClient(this.llmOptions);
     this.detector = new TriggerDetector();
+    this.learning = new LearningService();
+    this.learning.initialize();
     this.callType = options.callType ?? 'discovery';
     this.callStartTime = Date.now();
   }
@@ -104,12 +108,23 @@ export class CoachingService extends EventEmitter {
     for (const mention of techMentions) {
       this.techMentions.push(mention);
       this.emit('tech-mention', mention);
-      this.queueTechLookup(mention); // fires immediately, no cooldown
+      this.queueTechLookup(mention);
     }
 
-    // Detect questions from customer — fires IMMEDIATELY (no cooldown)
-    if (this.detector.isQuestion(segment)) {
-      this.queueAnswerQuestion(segment.text);
+    // Detect questions — DON'T fire immediately.
+    // Buffer detected questions and fire after a pause (next segment from same speaker
+    // or 3s timeout means the question is complete)
+    if (this.detector.isQuestion(segment) && segment.speaker !== 'you') {
+      this.pendingQuestion = segment.text;
+      this.pendingQuestionTime = Date.now();
+    } else if (this.pendingQuestion && segment.speaker === 'you') {
+      // User started speaking — they're about to answer. Fire the answer help NOW.
+      this.fireQuestionAnswer(this.pendingQuestion);
+      this.pendingQuestion = null;
+    } else if (this.pendingQuestion && segment.speaker !== 'you') {
+      // Same speaker continued — they're still asking. Append to question.
+      this.pendingQuestion += ' ' + segment.text;
+      this.pendingQuestionTime = Date.now();
     }
 
     // Auto-detect call type from first few segments
@@ -126,6 +141,90 @@ export class CoachingService extends EventEmitter {
       this.lastSummaryTime = now;
       this.runSummaryAgent();
     }
+  }
+
+  private pendingQuestion: string | null = null;
+  private pendingQuestionTime = 0;
+  private lastDetectedQuestion: string | null = null; // Track for learning
+
+  private fireQuestionAnswer(question: string): void {
+    // Only fire if enough context (at least 5 segments in the call)
+    if (this.segments.length < 5) return;
+    this.lastDetectedQuestion = question;
+    this.queueAnswerQuestion(question);
+  }
+
+  /**
+   * Detect and learn from good answers given by others.
+   * Called periodically to check if a Q&A pair just completed.
+   */
+  private detectAndLearnFromAnswer(): void {
+    if (!this.lastDetectedQuestion) return;
+    if (this.segments.length < 3) return;
+
+    // Look for the pattern: question was asked → someone gave a substantial answer
+    const recentSegments = this.segments.slice(-8);
+    const answerSegments = recentSegments.filter(s => s.speaker !== 'you');
+
+    // Need at least 3 answer segments totaling 50+ words to consider it a "good answer"
+    const answerText = answerSegments.map(s => s.text).join(' ');
+    const wordCount = answerText.split(/\s+/).length;
+
+    if (wordCount >= 50 && answerSegments.length >= 2) {
+      const answeredBy = answerSegments[0]?.speakerName ?? 'Unknown';
+
+      // Extract pattern asynchronously (non-blocking)
+      this.extractAnswerPattern(this.lastDetectedQuestion, answerText, answeredBy).catch(() => {});
+      this.lastDetectedQuestion = null; // Don't learn from same question twice
+    }
+  }
+
+  /**
+   * Use LLM to extract the answer pattern structure
+   */
+  private async extractAnswerPattern(question: string, answerText: string, answeredBy: string): Promise<void> {
+    const prompt = `A question was asked and someone gave a good answer. Extract the pattern of HOW they answered so we can coach someone to answer similarly in the future.
+
+Question: "${question}"
+Answer by ${answeredBy}: "${answerText.slice(0, 1000)}"
+
+Extract the answering pattern:
+
+Respond with JSON:
+{
+  "approach": "How they opened/structured their answer (e.g., 'Started with acknowledgment, then gave context, then specifics')",
+  "keyPoints": ["main point 1", "main point 2"],
+  "technique": "The technique they used (e.g., analogy, step-by-step breakdown, real example, comparison)",
+  "tone": "The tone they used (e.g., confident, empathetic, educational)",
+  "topic": "The general topic area"
+}`;
+
+    try {
+      const result = await this.llm.converseJSON<{
+        approach: string;
+        keyPoints: string[];
+        technique: string;
+        tone: string;
+        topic: string;
+      }>('You extract communication patterns from conversations. Be concise.', prompt);
+
+      if (result) {
+        this.learning.addAnswerPattern({
+          question,
+          answeredBy,
+          answerText: answerText.slice(0, 2000),
+          structure: {
+            approach: result.approach,
+            keyPoints: result.keyPoints,
+            technique: result.technique,
+            tone: result.tone,
+          },
+          callType: this.callType,
+          topic: result.topic,
+        });
+        console.log(`[Coaching] Learned answer pattern from ${answeredBy}: ${result.technique}`);
+      }
+    } catch { /* non-critical */ }
   }
 
   /**
@@ -218,26 +317,35 @@ Respond with JSON:
     this.lastSuggestionTime = now;
 
     try {
-      // Sentiment analysis: every 8 segments (not 3 — less noise)
-      if (this.segments.length >= 5 && this.segments.length % 8 === 0) {
+      // Sentiment analysis: every 10 segments
+      if (this.segments.length >= 5 && this.segments.length % 10 === 0) {
         await this.runSentimentAnalysis();
       }
 
-      // Question suggestions — only when meaningful:
-      // Training: every 12 segments (you're mostly listening)
-      // Discovery/negotiation: every 8 segments (you need to drive)
-      // Others: every 10 segments
-      const questionInterval = this.callType === 'training' ? 12
-        : (this.callType === 'discovery' || this.callType === 'negotiation') ? 8
-        : 10;
+      // Question suggestions — very conservative:
+      // Training: every 20 segments (you're listening, don't interrupt thinking)
+      // Discovery: every 12 segments
+      // Others: every 15 segments
+      const questionInterval = this.callType === 'training' ? 20
+        : this.callType === 'discovery' ? 12
+        : 15;
 
-      // Only suggest if the other person has spoken enough to warrant a response
-      const recentOtherSegments = this.segments.slice(-questionInterval).filter(s => s.speaker === 'other');
-      const hasEnoughContext = recentOtherSegments.length >= 3;
+      const recentOtherSegments = this.segments.slice(-questionInterval).filter(s => s.speaker !== 'you');
+      const hasEnoughContext = recentOtherSegments.length >= 5;
+      const lastSegmentIsOther = this.segments[this.segments.length - 1]?.speaker !== 'you';
 
-      if (this.segments.length >= 5 && this.segments.length % questionInterval === 0 && hasEnoughContext) {
+      if (this.segments.length >= 8 && this.segments.length % questionInterval === 0 && hasEnoughContext && lastSegmentIsOther) {
         await this.runQuestionSuggestions();
       }
+
+      // Fire pending question if sitting 3+ seconds without user speaking
+      if (this.pendingQuestion && Date.now() - this.pendingQuestionTime > 3000) {
+        this.fireQuestionAnswer(this.pendingQuestion);
+        this.pendingQuestion = null;
+      }
+
+      // Check if a Q&A pair just completed — learn from good answers
+      this.detectAndLearnFromAnswer();
     } catch (err) {
       this.emit('error', err instanceof Error ? err : new Error(String(err)));
     } finally {
@@ -344,23 +452,56 @@ Respond with JSON:
   private async queueAnswerQuestion(question: string): Promise<void> {
     const context = this.getContext();
     const systemPrompt = PromptTemplates.getSystemPrompt(this.callType);
-    const prompt = PromptTemplates.answerQuestionPrompt(question, context.recentTranscript, this.callType);
+
+    // Check if we have learned patterns for similar questions
+    const relevantPatterns = this.learning.getRelevantPatterns(question, this.callType, 2);
+    let patternContext = '';
+    if (relevantPatterns.length > 0) {
+      patternContext = '\n\nPREVIOUS GOOD ANSWERS (learn from these patterns):\n' +
+        relevantPatterns.map(p =>
+          `- ${p.answeredBy} answered "${p.question.slice(0, 60)}..." using technique: ${p.structure.technique}. ` +
+          `Approach: ${p.structure.approach}. Key points: ${p.structure.keyPoints.join(', ')}`
+        ).join('\n');
+    }
+
+    const prompt = PromptTemplates.answerQuestionPrompt(question, context.recentTranscript + patternContext, this.callType);
 
     try {
       const result = await this.llm.converseJSON<{
+        what?: string;
+        why?: string;
+        how?: string;
+        example?: string;
         simpleAnswer: string;
         keyDetails: string[];
         avoid: string;
         confidence: string;
+        isRhetorical?: boolean;
       }>(systemPrompt, prompt);
 
       if (result) {
+        // Build rich content with the structured answer
+        let content = result.simpleAnswer;
+        if (result.what) content += `\n\nWhat: ${result.what}`;
+        if (result.why) content += `\nWhy: ${result.why}`;
+        if (result.how) content += `\nHow: ${result.how}`;
+        if (result.example) content += `\nExample: ${result.example}`;
+
         this.emitSuggestion({
           type: 'answer',
-          title: 'Customer asked',
-          content: `${result.simpleAnswer}\n\nKey points: ${result.keyDetails?.join(', ')}`,
+          title: 'Question detected',
+          content,
           priority: 'high',
-          metadata: { avoid: result.avoid, confidence: result.confidence },
+          metadata: {
+            avoid: result.avoid,
+            confidence: result.confidence,
+            what: result.what,
+            why: result.why,
+            how: result.how,
+            example: result.example,
+            keyDetails: result.keyDetails,
+            isRhetorical: result.isRhetorical,
+          },
         });
       }
     } catch {

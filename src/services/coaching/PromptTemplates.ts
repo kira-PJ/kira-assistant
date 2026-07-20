@@ -34,16 +34,19 @@ Call type: ${context.callType}
 ${typeGuidance}
 Talk ratio: You ${context.talkRatio.you}% / Other ${context.talkRatio.other}%
 Call duration: ${Math.round(context.callDurationMs / 60000)} minutes
+Segments so far: ${context.segmentCount}
 
 Recent transcript:
 ${context.recentTranscript}
 
 IMPORTANT RULES:
-- The question MUST directly relate to something specific just said in the last few exchanges
-- Do NOT suggest generic questions or anything that was already answered
-- If there is nothing genuinely useful to ask right now, respond with an empty questions array: {"questions": []}
-- Only suggest a question if it would meaningfully advance understanding or uncover important info
-- Quality over quantity — silence is better than a bad suggestion
+- The question MUST directly relate to something specific said in the LAST 3-4 exchanges
+- Do NOT suggest generic questions or anything already covered in the transcript above
+- If there is nothing genuinely useful to ask right now, respond with: {"questions": []}
+- Only suggest if it would meaningfully advance the conversation or understanding
+- Read the MEETING CONTEXT (if provided above) — stay on-topic for this meeting
+- Do NOT ask about things unrelated to the meeting's stated purpose
+- Silence is better than a bad or off-topic suggestion
 
 Respond with JSON:
 {
@@ -114,17 +117,23 @@ Respond with JSON:
 
 Conversation context: ${context}
 
-You are ATTENDING this training. Help the user respond appropriately:
-- If it's a comprehension check, provide a concise answer based on what was just taught
-- If they're asking "any questions?", suggest a thoughtful clarification question
-- If it's rhetorical, note that no response is needed
-
-Keep it brief — 1-2 sentences max.
+You are ATTENDING this training. Help the user respond with depth:
+- If it's a comprehension check, provide a structured answer:
+  WHAT: the direct answer
+  WHY: why it works that way
+  HOW: the mechanism or process
+  EXAMPLE: a concrete scenario
+- If they're asking "any questions?", suggest a deep clarification question about something that wasn't fully explained
+- If it's rhetorical, note that no response is needed but explain the concept for the user's understanding
 
 Respond with JSON:
 {
-  "simpleAnswer": "What to say or think",
-  "keyDetails": ["relevant points from the training"],
+  "what": "Direct answer or response",
+  "why": "Why this is the case / reasoning",
+  "how": "How it works in practice",
+  "example": "A concrete example to illustrate",
+  "simpleAnswer": "1 sentence the user can say out loud",
+  "keyDetails": ["key point 1", "key point 2"],
   "avoid": "things not to say",
   "confidence": "high|medium|low",
   "isRhetorical": false
@@ -135,16 +144,26 @@ Respond with JSON:
 
 Conversation context: ${context}
 
-Provide a helpful answer the user can reference immediately. Include:
-1. Simple answer (1-2 sentences)
-2. Key details to mention
-3. What NOT to say (potential pitfalls)
+You are helping the user respond to this question. Provide a DEEP, structured answer — not a surface-level response.
+
+Structure your answer as:
+1. WHAT: Direct answer to the question (2-3 sentences)
+2. WHY: Why this matters / the reasoning behind it (2-3 sentences)  
+3. HOW: How it works in practice / implementation details (2-3 sentences)
+4. EXAMPLE: A real-world customer scenario or analogy that makes it concrete
+5. WHAT TO AVOID: Common mistakes or things not to say
+
+Be specific to what was discussed in the conversation. Use technical accuracy.
 
 Respond with JSON:
 {
-  "simpleAnswer": "...",
-  "keyDetails": ["...", "..."],
-  "avoid": "...",
+  "what": "Direct answer to the question",
+  "why": "Why this matters / reasoning",
+  "how": "How it works in practice",
+  "example": "A concrete real-world example or analogy",
+  "avoid": "What NOT to say or common pitfalls",
+  "simpleAnswer": "1 sentence TL;DR the user can say immediately",
+  "keyDetails": ["key point 1", "key point 2", "key point 3"],
   "confidence": "high|medium|low"
 }`;
   }

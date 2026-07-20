@@ -251,6 +251,28 @@ app.whenReady().then(async () => {
   ipcMain.handle('start-session', async (_event, sessionConfig: any) => {
     if (!orchestrator) return { success: false, error: 'Orchestrator not ready' };
 
+    // Auto-fix PulseAudio routing on Linux
+    // If user selected a monitor source, ensure the corresponding sink is default
+    if (process.platform === 'linux' && sessionConfig.systemDevice) {
+      try {
+        const { execSync } = require('child_process');
+        const selectedMonitor = sessionConfig.systemDevice;
+        // Monitor sources are named like "sink_name.monitor" — extract the sink name
+        const sinkName = selectedMonitor.replace('.monitor', '');
+        execSync(`pactl set-default-sink ${sinkName}`, { timeout: 3000 });
+        log.info('Auto-set PulseAudio default sink', { sink: sinkName });
+      } catch {
+        // Non-critical — user may have already set it correctly
+      }
+    }
+    // Also set default source if mic selected
+    if (process.platform === 'linux' && sessionConfig.micDevice) {
+      try {
+        const { execSync } = require('child_process');
+        execSync(`pactl set-default-source ${sessionConfig.micDevice}`, { timeout: 3000 });
+      } catch { /* non-critical */ }
+    }
+
     // Store meeting context for AI coaching
     if (sessionConfig.meetingContext) {
       config.set('currentMeetingContext', sessionConfig.meetingContext);

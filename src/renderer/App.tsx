@@ -43,7 +43,7 @@ const App: React.FC = () => {
   // Show popup when a question-answer suggestion arrives
   useEffect(() => {
     const latest = session.suggestions[0];
-    if (latest && latest.type === 'answer' && latest.title === 'Customer asked') {
+    if (latest && latest.type === 'answer' && (latest.title === 'Question detected' || latest.title === 'Customer asked')) {
       setQuestionPopup(latest);
     }
   }, [session.suggestions]);

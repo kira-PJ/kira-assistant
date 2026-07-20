@@ -2,39 +2,41 @@ import { TranscriptSegment } from './types';
 
 /**
  * Default speaker labels per call type.
- * The "other" name is used when no participant name is given or detected.
  */
 const SPEAKER_LABELS: Record<string, { you: string; other: string }> = {
-  discovery: { you: 'You', other: 'Customer' },
-  demo: { you: 'You (Presenter)', other: 'Attendee' },
+  discovery: { you: 'You', other: 'Speaker' },
+  demo: { you: 'You', other: 'Speaker' },
   training: { you: 'You', other: 'Trainer' },
-  technical: { you: 'You', other: 'Peer' },
-  followup: { you: 'You', other: 'Customer' },
-  negotiation: { you: 'You', other: 'Counterpart' },
+  technical: { you: 'You', other: 'Speaker' },
+  followup: { you: 'You', other: 'Speaker' },
+  negotiation: { you: 'You', other: 'Speaker' },
 };
 
 /**
- * SpeakerIdentifier - Detects speaker names from introductions
+ * SpeakerIdentifier - Multi-speaker support
  *
- * Listens for patterns like:
- * - "Hi, I'm Moses"
- * - "My name is Sarah"
- * - "This is John speaking"
- * - "Hey everyone, Moses here"
+ * The audio has two channels: mic (you) and system (everyone else).
+ * Since system audio mixes all other participants into one stream,
+ * we can't auto-separate them. Instead we:
  *
- * Once detected, relabels future segments from that source
- * with the actual name instead of the default label.
+ * 1. Allow pre-setting participant names from the pre-call panel
+ * 2. Auto-detect name introductions
+ * 3. Support per-segment renaming (edit ONE segment, not all)
+ * 4. Track multiple "other" speakers by segment ID
  *
- * Default labels change based on call type:
- * - training: "Trainer" / "You"
- * - discovery: "Customer" / "You"
- * - demo: "Attendee" / "You (Presenter)"
+ * When user renames a segment to "Timothy", only that segment and
+ * consecutive segments from the same speaker get that name — NOT all
+ * "other" segments globally.
  */
 export class SpeakerIdentifier {
-  private speakerNames: Map<string, string> = new Map(); // source → name
-  private introPatterns: RegExp[];
-  private callType: string = 'discovery';
+  private youName = 'You';
+  private defaultOtherName = 'Speaker';
+  private participants: string[] = []; // Pre-set participant names
+  private segmentOverrides: Map<string, string> = new Map(); // segmentId → custom name
+  private lastOtherName: string | null = null; // Track last assigned "other" name
+  private callType = 'discovery';
   private myRole: 'leading' | 'attending' = 'leading';
+  private introPatterns: RegExp[];
 
   constructor() {
     this.introPatterns = [
@@ -43,98 +45,125 @@ export class SpeakerIdentifier {
       /(?:this is|it's|I'm)\s+([A-Z][a-z]+)\s+(?:from|at|with)/i,
       /(?:let me introduce myself,?\s*)?(?:I'm|I am)\s+([A-Z][a-z]+)/i,
     ];
-
-    // Default: mic is always "You"
-    this.speakerNames.set('mic', 'You');
   }
 
   /**
-   * Set call type to adjust default speaker labels.
-   * When myRole='attending' and type='training', the other person is the Trainer.
-   * When myRole='leading' and type='training', you are the trainer.
+   * Set call type to adjust default labels.
    */
   setCallType(type: string, myRole?: 'leading' | 'attending'): void {
     this.callType = type;
     if (myRole) this.myRole = myRole;
 
-    // Apply role-aware defaults unless a custom name was already set via setName
     const labels = SPEAKER_LABELS[type] ?? SPEAKER_LABELS['discovery'];
 
-    // For training, flip labels based on who is leading
     if (type === 'training') {
-      if (this.myRole === 'attending') {
-        // I'm attending: the other person is Trainer, I'm Student
-        if (!this.speakerNames.has('other_custom')) this.speakerNames.set('other', 'Trainer');
-        if (!this.speakerNames.has('you_custom')) this.speakerNames.set('you', 'You');
-      } else {
-        // I'm leading: I'm the trainer, other is Student
-        if (!this.speakerNames.has('other_custom')) this.speakerNames.set('other', 'Student');
-        if (!this.speakerNames.has('you_custom')) this.speakerNames.set('you', 'You (Trainer)');
-      }
+      this.defaultOtherName = this.myRole === 'attending' ? 'Trainer' : 'Student';
     } else if (type === 'demo') {
-      if (this.myRole === 'leading') {
-        if (!this.speakerNames.has('other_custom')) this.speakerNames.set('other', 'Attendee');
-        if (!this.speakerNames.has('you_custom')) this.speakerNames.set('you', 'You (Presenter)');
-      } else {
-        if (!this.speakerNames.has('other_custom')) this.speakerNames.set('other', 'Presenter');
-        if (!this.speakerNames.has('you_custom')) this.speakerNames.set('you', 'You');
-      }
+      this.defaultOtherName = this.myRole === 'attending' ? 'Presenter' : 'Attendee';
     } else {
-      if (!this.speakerNames.has('other_custom')) this.speakerNames.set('other', labels.other);
+      this.defaultOtherName = labels.other;
     }
   }
 
   /**
-   * Process a segment and try to detect speaker names
-   * Returns the segment with updated speakerName if detected
+   * Set participants from pre-call config.
+   * First participant becomes the default "other" name.
+   * All are stored for reference.
+   */
+  setParticipants(participantList: string): void {
+    this.participants = participantList
+      .split(/[,;]/)
+      .map(p => p.replace(/\(.*?\)/g, '').trim())
+      .filter(p => p.length > 0);
+
+    // Use first participant as default other name
+    if (this.participants.length > 0) {
+      this.defaultOtherName = this.participants[0];
+      this.lastOtherName = this.participants[0];
+    }
+  }
+
+  /**
+   * Process a segment — assign speaker name.
    */
   processSegment(segment: TranscriptSegment): TranscriptSegment {
-    // For "you" speaker, use known name (may be customized)
+    // Check for per-segment override
+    const override = this.segmentOverrides.get(segment.id);
+    if (override) {
+      return { ...segment, speakerName: override };
+    }
+
+    // "You" is always from mic
     if (segment.speaker === 'you') {
-      const youName = this.speakerNames.get('you') ?? 'You';
-      return { ...segment, speakerName: youName };
+      return { ...segment, speakerName: this.youName };
     }
 
-    // Try to detect a name introduction in this segment
+    // Try to detect a name introduction
     const detectedName = this.detectName(segment.text);
-    if (detectedName && segment.speaker === 'other') {
-      this.speakerNames.set('other', detectedName);
+    if (detectedName) {
+      this.lastOtherName = detectedName;
+      // Add to participants if new
+      if (!this.participants.includes(detectedName)) {
+        this.participants.push(detectedName);
+      }
     }
 
-    // Apply known name, fall back to call-type default
-    const knownName = this.speakerNames.get(segment.speaker);
-    if (knownName) {
-      return { ...segment, speakerName: knownName };
-    }
-
-    // Final fallback: use call-type default
-    const labels = SPEAKER_LABELS[this.callType] ?? SPEAKER_LABELS['discovery'];
-    return { ...segment, speakerName: labels.other };
+    // Use last known other name or default
+    const name = this.lastOtherName ?? this.defaultOtherName;
+    return { ...segment, speakerName: name };
   }
 
   /**
-   * Manually set a speaker name (from pre-call participants input or real-time edit)
+   * Rename a specific segment (and optionally consecutive segments).
+   * This does NOT rename ALL "other" segments — only the targeted ones.
+   */
+  renameSegment(segmentId: string, newName: string): void {
+    this.segmentOverrides.set(segmentId, newName);
+    // Track this as the current speaker so future segments use this name
+    this.lastOtherName = newName;
+    // Add to participants if new
+    if (!this.participants.includes(newName)) {
+      this.participants.push(newName);
+    }
+  }
+
+  /**
+   * Rename a speaker by source ('you' or 'other').
+   * For 'other', this sets the DEFAULT name for future segments
+   * but does NOT retroactively rename all past segments.
+   */
+  renameSpeaker(source: 'you' | 'other', name: string): void {
+    if (source === 'you') {
+      this.youName = name;
+    } else {
+      this.defaultOtherName = name;
+      this.lastOtherName = name;
+    }
+  }
+
+  /**
+   * Set name for legacy compatibility
    */
   setName(source: 'you' | 'other', name: string): void {
-    this.speakerNames.set(source, name);
-    // Mark as custom so setCallType doesn't overwrite it
-    if (source === 'other') this.speakerNames.set('other_custom', 'true');
-    if (source === 'you') this.speakerNames.set('you_custom', 'true');
+    this.renameSpeaker(source, name);
   }
 
   /**
-   * Rename a speaker mid-session (triggered by UI edit).
-   * Updates all future labels for that speaker source.
-   */
-  renameSpeaker(source: 'you' | 'other', newName: string): void {
-    this.setName(source, newName);
-  }
-
-  /**
-   * Get current speaker names
+   * Get current state
    */
   getNames(): Record<string, string> {
-    return Object.fromEntries(this.speakerNames);
+    return {
+      you: this.youName,
+      other: this.lastOtherName ?? this.defaultOtherName,
+      participants: this.participants.join(', '),
+    };
+  }
+
+  /**
+   * Get list of known participants
+   */
+  getParticipants(): string[] {
+    return [...this.participants];
   }
 
   /**
@@ -145,9 +174,7 @@ export class SpeakerIdentifier {
       const match = text.match(pattern);
       if (match && match[1]) {
         const name = match[1].trim();
-        // Sanity check — name should be 2-15 chars, start with uppercase
         if (name.length >= 2 && name.length <= 15 && /^[A-Z]/.test(name)) {
-          // Filter out common false positives
           const falsePositives = ['The', 'This', 'That', 'Here', 'There', 'Just', 'Well', 'Also', 'Actually'];
           if (!falsePositives.includes(name)) {
             return name;

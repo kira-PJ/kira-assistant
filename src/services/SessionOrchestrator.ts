@@ -162,12 +162,9 @@ export class SessionOrchestrator extends EventEmitter {
       );
     }
 
-    // If participants provided, set the first one as the "other" speaker name
+    // Pass all participants to the speaker identifier
     if (config.participants) {
-      const firstName = config.participants.split(/[,;]/)[0]?.trim().split(/\s/)[0];
-      if (firstName) {
-        this.speakerIdentifier.setName('other', firstName);
-      }
+      this.speakerIdentifier.setParticipants(config.participants);
     }
   }
 
@@ -351,9 +348,18 @@ export class SessionOrchestrator extends EventEmitter {
 
   /**
    * Rename a speaker label mid-session (from UI)
+   * Sets the default for future "other" segments.
    */
   renameSpeaker(source: 'you' | 'other', name: string): void {
     this.speakerIdentifier.renameSpeaker(source, name);
+  }
+
+  /**
+   * Rename a specific segment by ID (for multi-speaker support).
+   * Only affects that segment and future ones — not all "other" segments.
+   */
+  renameSegment(segmentId: string, name: string): void {
+    this.speakerIdentifier.renameSegment(segmentId, name);
   }
 
   /**
