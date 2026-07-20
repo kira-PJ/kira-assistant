@@ -61,7 +61,7 @@ const EditableSpeakerName: React.FC<{
   return (
     <span
       onClick={() => setEditing(true)}
-      className={`text-xs font-semibold cursor-pointer hover:underline ${
+      className={`text-[13px] font-semibold cursor-pointer hover:underline ${
         speaker === 'you' ? 'text-ghost-speaker-you' : 'text-ghost-speaker-other'
       }`}
       title="Click to rename speaker"
@@ -103,9 +103,9 @@ const TranscriptPanel: React.FC<TranscriptPanelProps> = ({ entries, onBookmark, 
   if (entries.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-ghost-text-dim">
-        <span className="text-3xl mb-2">🎙️</span>
-        <p className="text-sm">Start a capture to see live transcript</p>
-        <p className="text-xs mt-1">Press Ctrl+Shift+R to begin</p>
+        <p className="text-base font-medium">No transcript yet</p>
+        <p className="text-sm mt-2">Start a capture to see live transcript</p>
+        <p className="text-xs mt-1 text-ghost-text-dim/60">Ctrl+Shift+R to begin</p>
       </div>
     );
   }
@@ -113,49 +113,49 @@ const TranscriptPanel: React.FC<TranscriptPanelProps> = ({ entries, onBookmark, 
   return (
     <div className="h-full flex flex-col">
       {/* Toolbar */}
-      <div className="flex items-center justify-between px-3 py-1.5 border-b border-ghost-border bg-ghost-surface/50">
-        <span className="text-[10px] text-ghost-text-dim">
+      <div className="flex items-center justify-between px-3 py-2 border-b border-ghost-border bg-ghost-surface/50">
+        <span className="text-xs text-ghost-text-dim">
           {entries.filter(e => !e.isPartial).length} segments
         </span>
         <button
           onClick={handleCopyAll}
-          className="text-[10px] px-2 py-0.5 rounded border border-ghost-border text-ghost-text-dim hover:text-ghost-text hover:border-ghost-accent transition-colors"
+          className="text-xs px-3 py-1 rounded border border-ghost-border text-ghost-text-dim hover:text-ghost-text hover:border-ghost-accent transition-colors"
           title="Copy full transcript"
         >
-          {copied ? '✓ Copied' : '📋 Copy All'}
+          {copied ? 'Copied' : 'Copy All'}
         </button>
       </div>
 
       {/* Transcript entries — user-select enabled */}
-      <div ref={scrollRef} className="flex-1 overflow-y-auto p-3 space-y-3 select-text">
+      <div ref={scrollRef} className="flex-1 overflow-y-auto p-3 space-y-4 select-text">
         {entries.map((entry) => (
           <div key={entry.id} className="group">
-            <div className="flex items-baseline gap-2 mb-0.5">
+            <div className="flex items-baseline gap-2 mb-1">
               <EditableSpeakerName
                 name={entry.speakerName}
                 speaker={entry.speaker}
                 onRename={handleRenameSpeaker}
               />
-              <span className="text-[10px] text-ghost-text-dim">{formatTime(entry.timestamp)}</span>
+              <span className="text-[11px] text-ghost-text-dim">{formatTime(entry.timestamp)}</span>
               <button
                 onClick={() => onBookmark(entry.id)}
-                className={`text-[10px] transition-opacity ml-auto ${
+                className={`text-xs transition-opacity ml-auto px-1.5 py-0.5 rounded ${
                   entry.isBookmarked
-                    ? 'opacity-100 text-ghost-warning'
-                    : 'opacity-0 group-hover:opacity-100 text-ghost-text-dim hover:text-ghost-warning'
+                    ? 'opacity-100 text-ghost-warning bg-ghost-warning/10'
+                    : 'opacity-0 group-hover:opacity-100 text-ghost-text-dim hover:text-ghost-warning hover:bg-ghost-warning/10'
                 }`}
                 title="Bookmark"
               >
-                🔖
+                {entry.isBookmarked ? 'Saved' : 'Save'}
               </button>
             </div>
             <p
-              className={`text-sm leading-relaxed ${
+              className={`text-[14px] leading-relaxed ${
                 entry.isPartial
                   ? 'text-ghost-text-dim italic'
                   : 'text-ghost-text'
               }`}
-              style={{ opacity: entry.isPartial ? 0.6 : Math.max(0.7, entry.confidence) }}
+              style={{ opacity: entry.isPartial ? 0.6 : Math.max(0.8, entry.confidence) }}
             >
               {entry.text}
             </p>

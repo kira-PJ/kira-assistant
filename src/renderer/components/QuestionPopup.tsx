@@ -62,8 +62,7 @@ const QuestionPopup: React.FC<QuestionPopupProps> = ({ suggestion, onDismiss }) 
 
         {/* Header */}
         <div className="flex items-center gap-2 mb-2">
-          <span className="text-sm">❓</span>
-          <span className="text-xs font-semibold text-ghost-accent">Question Detected</span>
+          <span className="text-[13px] font-semibold text-ghost-accent">Question Detected</span>
           {/* Countdown bar */}
           <div className="flex-1 h-0.5 bg-ghost-border rounded-full overflow-hidden ml-2">
             <div

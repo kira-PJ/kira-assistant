@@ -6,13 +6,13 @@ interface TabBarProps {
   onTabChange: (tab: TabId) => void;
 }
 
-const tabs: { id: TabId; label: string; icon: string }[] = [
-  { id: 'transcript', label: 'Transcript', icon: '📝' },
-  { id: 'suggestions', label: 'AI Coach', icon: '💡' },
-  { id: 'context', label: 'Context', icon: '🔍' },
-  { id: 'metrics', label: 'Metrics', icon: '📊' },
-  { id: 'actions', label: 'Actions', icon: '✅' },
-  { id: 'history', label: 'History', icon: '📂' },
+const tabs: { id: TabId; label: string }[] = [
+  { id: 'transcript', label: 'Transcript' },
+  { id: 'suggestions', label: 'Coach' },
+  { id: 'context', label: 'Context' },
+  { id: 'metrics', label: 'Metrics' },
+  { id: 'actions', label: 'Actions' },
+  { id: 'history', label: 'History' },
 ];
 
 const TabBar: React.FC<TabBarProps> = ({ activeTab, onTabChange }) => {
@@ -22,16 +22,13 @@ const TabBar: React.FC<TabBarProps> = ({ activeTab, onTabChange }) => {
         <button
           key={tab.id}
           onClick={() => onTabChange(tab.id)}
-          className={`flex-1 py-1.5 px-1 text-xs font-medium transition-colors border-b-2 ${
+          className={`flex-1 py-2 px-1 text-[13px] font-medium transition-colors border-b-2 ${
             activeTab === tab.id
               ? 'border-ghost-accent text-ghost-accent'
               : 'border-transparent text-ghost-text-dim hover:text-ghost-text'
           }`}
         >
-          <span className="block text-center">
-            <span className="text-sm">{tab.icon}</span>
-            <span className="block mt-0.5">{tab.label}</span>
-          </span>
+          {tab.label}
         </button>
       ))}
     </div>

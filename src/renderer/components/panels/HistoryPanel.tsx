@@ -99,9 +99,9 @@ const HistoryPanel: React.FC = () => {
           <div className="flex gap-2 mt-2">
             <button
               onClick={handleCopyTranscript}
-              className="text-[10px] px-2 py-0.5 rounded border border-ghost-border text-ghost-text-dim hover:text-ghost-text hover:border-ghost-accent transition-colors"
+              className="text-xs px-3 py-1 rounded border border-ghost-border text-ghost-text-dim hover:text-ghost-text hover:border-ghost-accent transition-colors"
             >
-              {copied ? '✓ Copied' : '📋 Copy Transcript'}
+              {copied ? 'Copied' : 'Copy Transcript'}
             </button>
           </div>
         </div>
@@ -134,12 +134,11 @@ const HistoryPanel: React.FC = () => {
   if (error) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-ghost-text-dim">
-        <span className="text-3xl mb-2">⚠️</span>
-        <p className="text-sm text-ghost-danger">Failed to load history</p>
-        <p className="text-[10px] mt-1">{error}</p>
+        <p className="text-base text-ghost-danger font-medium">Failed to load history</p>
+        <p className="text-sm mt-1">{error}</p>
         <button
           onClick={loadCalls}
-          className="mt-3 text-xs px-3 py-1 rounded border border-ghost-border hover:border-ghost-accent text-ghost-text-dim hover:text-ghost-text"
+          className="mt-3 text-sm px-4 py-1.5 rounded border border-ghost-border hover:border-ghost-accent text-ghost-text-dim hover:text-ghost-text"
         >
           Retry
         </button>
@@ -151,10 +150,9 @@ const HistoryPanel: React.FC = () => {
   if (calls.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-ghost-text-dim">
-        <span className="text-3xl mb-2">📂</span>
-        <p className="text-sm">No saved calls yet</p>
-        <p className="text-xs mt-1">Calls are saved when you stop capture</p>
-        <p className="text-[10px] mt-2 text-ghost-text-dim/60">
+        <p className="text-base font-medium">No saved calls yet</p>
+        <p className="text-sm mt-1">Calls are saved when you stop capture</p>
+        <p className="text-xs mt-2 text-ghost-text-dim/60">
           Stored at: ~/.config/kira-assistant/calls/
         </p>
       </div>
@@ -165,15 +163,15 @@ const HistoryPanel: React.FC = () => {
   return (
     <div className="h-full overflow-y-auto p-3 space-y-2">
       <div className="flex items-center justify-between mb-2">
-        <h3 className="text-xs font-semibold text-ghost-text-dim uppercase tracking-wider">
+        <h3 className="text-sm font-semibold text-ghost-text-dim uppercase tracking-wider">
           Past Calls ({calls.length})
         </h3>
         <button
           onClick={loadCalls}
-          className="text-[10px] text-ghost-text-dim hover:text-ghost-accent"
+          className="text-xs text-ghost-text-dim hover:text-ghost-accent px-2 py-0.5 rounded border border-ghost-border hover:border-ghost-accent"
           title="Refresh"
         >
-          🔄
+          Refresh
         </button>
       </div>
       {calls.map((call) => (
