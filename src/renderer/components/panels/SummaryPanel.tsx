@@ -9,6 +9,12 @@ interface ProcessedData {
   nextSteps: string[];
   followUpEmail?: { subject: string; body: string };
   vocabulary?: { term: string; definition: string }[];
+  recommendations?: {
+    strengths: string[];
+    improvements: string[];
+    suggestions: string[];
+    overallScore?: number;
+  };
 }
 
 type SummaryTab = 'overview' | 'email' | 'vocabulary';
@@ -200,6 +206,53 @@ const OverviewContent: React.FC<{ data: ProcessedData }> = ({ data }) => (
             </li>
           ))}
         </ol>
+      </div>
+    )}
+
+    {/* Recommendations */}
+    {data.recommendations && (
+      <div className="border-t border-ghost-border pt-4 mt-2">
+        <div className="flex items-center justify-between mb-3">
+          <h4 className="text-[12px] font-semibold text-ghost-text-dim uppercase tracking-wider">Meeting Recommendations</h4>
+          {data.recommendations.overallScore && (
+            <span className={`text-[16px] font-bold ${data.recommendations.overallScore >= 7 ? 'text-ghost-accent' : data.recommendations.overallScore >= 5 ? 'text-ghost-warning' : 'text-ghost-danger'}`}>
+              {data.recommendations.overallScore}/10
+            </span>
+          )}
+        </div>
+
+        {data.recommendations.strengths?.length > 0 && (
+          <div className="mb-3">
+            <span className="text-[11px] font-semibold text-ghost-accent block mb-1.5">What went well</span>
+            {data.recommendations.strengths.map((s, i) => (
+              <p key={i} className="text-[13px] text-ghost-text leading-relaxed pl-4 relative mb-1">
+                <span className="absolute left-0 text-ghost-accent">+</span>{s}
+              </p>
+            ))}
+          </div>
+        )}
+
+        {data.recommendations.improvements?.length > 0 && (
+          <div className="mb-3">
+            <span className="text-[11px] font-semibold text-ghost-warning block mb-1.5">What could improve</span>
+            {data.recommendations.improvements.map((s, i) => (
+              <p key={i} className="text-[13px] text-ghost-text leading-relaxed pl-4 relative mb-1">
+                <span className="absolute left-0 text-ghost-warning">-</span>{s}
+              </p>
+            ))}
+          </div>
+        )}
+
+        {data.recommendations.suggestions?.length > 0 && (
+          <div>
+            <span className="text-[11px] font-semibold text-ghost-speaker-you block mb-1.5">For next time</span>
+            {data.recommendations.suggestions.map((s, i) => (
+              <p key={i} className="text-[13px] text-ghost-text leading-relaxed pl-4 relative mb-1">
+                <span className="absolute left-0 text-ghost-speaker-you text-[11px] font-bold">{i + 1}.</span>{s}
+              </p>
+            ))}
+          </div>
+        )}
       </div>
     )}
   </>

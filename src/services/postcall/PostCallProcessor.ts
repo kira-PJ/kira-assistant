@@ -24,6 +24,13 @@ export interface ProcessedCall {
   followUpEmail?: { subject: string; body: string };
   /** New vocabulary/jargon introduced in this call */
   vocabulary?: { term: string; definition: string }[];
+  /** Meeting handling recommendations — what went well and what to improve */
+  recommendations?: {
+    strengths: string[];
+    improvements: string[];
+    suggestions: string[];
+    overallScore?: number; // 1-10
+  };
   /** Processing metadata */
   processedAt: number;
 }
@@ -163,7 +170,7 @@ ${context ? `Meeting context: ${context}\n` : ''}
 Transcript:
 ${truncated}
 
-Produce a structured analysis including a follow-up email draft and any new vocabulary/jargon introduced.
+Produce a structured analysis including a follow-up email draft, new vocabulary, and meeting handling recommendations.
 
 Respond with JSON:
 {
@@ -183,8 +190,22 @@ Respond with JSON:
   },
   "vocabulary": [
     {"term": "New technical term or jargon introduced", "definition": "Brief explanation of what it means in context"}
-  ]
+  ],
+  "recommendations": {
+    "strengths": ["What was handled well in this meeting (specific examples from transcript)"],
+    "improvements": ["What could have been done better (specific, actionable feedback)"],
+    "suggestions": ["Concrete suggestions for next time (e.g., 'Ask about X before presenting Y', 'When customer mentions Z, pivot to...')"],
+    "overallScore": 7
+  }
 }
+
+For recommendations: analyze how the meeting was CONDUCTED (not just content). Consider:
+- Was the agenda clear? Were transitions smooth?
+- Were customer questions addressed fully or left hanging?
+- Was the talk ratio appropriate? Too much talking, not enough listening?
+- Were objections handled well? Were buying signals captured?
+- Did the team collaborate effectively? Were handoffs smooth?
+- Were next steps clearly defined and agreed upon?
 
 For vocabulary: only include terms that were NEW or EXPLAINED during this call. Skip common/obvious terms.`;
 
@@ -198,6 +219,7 @@ For vocabulary: only include terms that were NEW or EXPLAINED during this call. 
         nextSteps: string[];
         followUpEmail?: { subject: string; body: string };
         vocabulary?: { term: string; definition: string }[];
+        recommendations?: { strengths: string[]; improvements: string[]; suggestions: string[]; overallScore?: number };
       }>(systemPrompt, userPrompt);
 
       return {
@@ -209,6 +231,7 @@ For vocabulary: only include terms that were NEW or EXPLAINED during this call. 
         nextSteps: result?.nextSteps ?? [],
         followUpEmail: result?.followUpEmail,
         vocabulary: result?.vocabulary ?? [],
+        recommendations: result?.recommendations,
       };
     } catch (err) {
       console.error('[PostCallProcessor] LLM analysis failed:', err);

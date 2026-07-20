@@ -643,6 +643,53 @@ const CallDetail: React.FC<{ call: CallFull; theme: typeof themes.dark }> = ({ c
         </div>
       )}
 
+      {/* Recommendations */}
+      {(processed as any)?.recommendations && (
+        <div style={{ marginBottom: '24px', background: t.surface, padding: '20px 24px', borderRadius: '12px', border: `1px solid ${t.border}` }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+            <h4 style={{ fontSize: '13px', fontWeight: 600, color: t.textMuted, textTransform: 'uppercase', letterSpacing: '0.5px', margin: 0 }}>Meeting Recommendations</h4>
+            {(processed as any).recommendations.overallScore && (
+              <span style={{ fontSize: '20px', fontWeight: 700, color: (processed as any).recommendations.overallScore >= 7 ? t.accent : (processed as any).recommendations.overallScore >= 5 ? t.warning : t.danger }}>
+                {(processed as any).recommendations.overallScore}/10
+              </span>
+            )}
+          </div>
+
+          {(processed as any).recommendations.strengths?.length > 0 && (
+            <div style={{ marginBottom: '14px' }}>
+              <span style={{ fontSize: '12px', fontWeight: 600, color: t.accent, display: 'block', marginBottom: '8px' }}>What went well</span>
+              {(processed as any).recommendations.strengths.map((s: string, i: number) => (
+                <p key={i} style={{ fontSize: '14px', color: t.text, margin: '0 0 6px', paddingLeft: '14px', position: 'relative', lineHeight: '1.6' }}>
+                  <span style={{ position: 'absolute', left: 0, color: t.accent }}>+</span>{s}
+                </p>
+              ))}
+            </div>
+          )}
+
+          {(processed as any).recommendations.improvements?.length > 0 && (
+            <div style={{ marginBottom: '14px' }}>
+              <span style={{ fontSize: '12px', fontWeight: 600, color: t.warning, display: 'block', marginBottom: '8px' }}>What could improve</span>
+              {(processed as any).recommendations.improvements.map((s: string, i: number) => (
+                <p key={i} style={{ fontSize: '14px', color: t.text, margin: '0 0 6px', paddingLeft: '14px', position: 'relative', lineHeight: '1.6' }}>
+                  <span style={{ position: 'absolute', left: 0, color: t.warning }}>-</span>{s}
+                </p>
+              ))}
+            </div>
+          )}
+
+          {(processed as any).recommendations.suggestions?.length > 0 && (
+            <div>
+              <span style={{ fontSize: '12px', fontWeight: 600, color: t.speakerYou, display: 'block', marginBottom: '8px' }}>For next time</span>
+              {(processed as any).recommendations.suggestions.map((s: string, i: number) => (
+                <p key={i} style={{ fontSize: '14px', color: t.text, margin: '0 0 6px', paddingLeft: '14px', position: 'relative', lineHeight: '1.6' }}>
+                  <span style={{ position: 'absolute', left: 0, color: t.speakerYou, fontSize: '12px', fontWeight: 700 }}>{i + 1}.</span>{s}
+                </p>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Talk Ratio */}
       {call.talkRatio && (
         <div style={{ marginBottom: '24px', background: t.surface, padding: '20px 24px', borderRadius: '12px', border: `1px solid ${t.border}` }}>
