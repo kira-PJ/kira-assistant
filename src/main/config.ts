@@ -76,7 +76,17 @@ export class ConfigStore {
 
   get(key: string): unknown {
     if (SENSITIVE_KEYS.has(key)) {
-      return this.getSecure(key);
+      // Try secure store first, fall back to regular config (for migration)
+      const secureValue = this.getSecure(key);
+      if (secureValue !== undefined) return secureValue;
+      // Fallback: check regular config (old unencrypted data)
+      const fallback = this.store.get(key as keyof GhostConfig);
+      if (fallback !== undefined) {
+        // Migrate: move to secure store for next time
+        this.setSecure(key, fallback);
+        this.store.delete(key as keyof GhostConfig);
+      }
+      return fallback;
     }
     return this.store.get(key as keyof GhostConfig);
   }
