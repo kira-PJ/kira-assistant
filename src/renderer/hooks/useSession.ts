@@ -40,56 +40,41 @@ export function useSession() {
           const lastIdx = prev.length - 1;
           const last = lastIdx >= 0 ? prev[lastIdx] : null;
 
-          // If partial: replace the current partial block for this speaker
+          // If partial: replace the current partial for this speaker
           if (segment.isPartial) {
-            if (last && last.isPartial && last.speaker === segment.speaker) {
+            if (last && last.isPartial) {
+              // Replace any existing partial (regardless of speaker — diarization can fluctuate)
               const updated = [...prev];
               updated[lastIdx] = segment;
               return updated;
             }
-            // New partial after a final — append as new entry
             return [...prev, segment];
           }
 
-          // Final result: merge into the last block if same speaker and within 8 seconds
-          const timeSinceLast = last ? segment.timestamp - last.timestamp : Infinity;
-          const sameSpeaker = last && last.speaker === segment.speaker;
-          const withinGap = timeSinceLast < 8000;
-
-          if (last && last.isPartial && last.speaker === segment.speaker) {
-            // Replace partial with final
-            const updated = [...prev];
-            if (sameSpeaker && lastIdx > 0 && !prev[lastIdx - 1].isPartial && prev[lastIdx - 1].speaker === segment.speaker) {
-              // Merge into the block before the partial
-              updated.splice(lastIdx, 1); // remove partial
-              updated[updated.length - 1] = {
-                ...updated[updated.length - 1],
-                text: updated[updated.length - 1].text + ' ' + segment.text,
-                timestamp: segment.timestamp,
-                confidence: segment.confidence,
-                isPartial: false,
-              };
-            } else {
-              updated[lastIdx] = segment;
-            }
-            return updated;
+          // Final result arriving — remove any trailing partial first
+          let base = [...prev];
+          if (base.length > 0 && base[base.length - 1].isPartial) {
+            base.pop(); // Remove the partial that this final replaces
           }
 
-          if (sameSpeaker && withinGap && last && !last.isPartial) {
-            // Same speaker, still talking — append to the existing block
-            const updated = [...prev];
-            updated[lastIdx] = {
-              ...last,
-              text: last.text + ' ' + segment.text,
+          // Merge with previous final if same speaker and within 8 seconds
+          const lastFinal = base.length > 0 ? base[base.length - 1] : null;
+          const timeSinceLast = lastFinal ? segment.timestamp - lastFinal.timestamp : Infinity;
+          const sameSpeaker = lastFinal && lastFinal.speaker === segment.speaker;
+
+          if (sameSpeaker && timeSinceLast < 8000 && !lastFinal.isPartial) {
+            base[base.length - 1] = {
+              ...lastFinal,
+              text: lastFinal.text + ' ' + segment.text,
               timestamp: segment.timestamp,
-              confidence: Math.min(last.confidence, segment.confidence),
+              confidence: Math.min(lastFinal.confidence, segment.confidence),
               isPartial: false,
             };
-            return updated;
+            return base;
           }
 
-          // New speaker or long pause — start a new block
-          return [...prev, segment];
+          // New speaker or long gap — new entry
+          return [...base, segment];
         });
       })
     );

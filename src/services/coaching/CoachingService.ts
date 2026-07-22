@@ -101,49 +101,32 @@ export class CoachingService extends EventEmitter {
 
     this.segments.push(segment);
     this.updateTalkRatio(segment);
-    this.resetSilenceTimer();
 
     // Detect tech mentions (deduplicated — only emit once per term)
+    // NOTE: we emit the mention but do NOT auto-lookup via LLM anymore
+    // User can ask about a tech term via chat if they want details
     const techMentions = this.detector.detectTechMentions(segment);
     for (const mention of techMentions) {
       const alreadySeen = this.techMentions.some(m => m.term.toLowerCase() === mention.term.toLowerCase());
       this.techMentions.push(mention);
       if (!alreadySeen) {
         this.emit('tech-mention', mention);
-        this.queueTechLookup(mention);
+        // NO auto LLM lookup — was producing wrong info (e.g., Bedrock definition wrong)
       }
     }
 
-    // Detect questions — DON'T fire immediately.
-    // Buffer detected questions and fire after a pause (next segment from same speaker
-    // or 3s timeout means the question is complete)
-    if (this.detector.isQuestion(segment) && segment.speaker !== 'you') {
-      this.pendingQuestion = segment.text;
-      this.pendingQuestionTime = Date.now();
-    } else if (this.pendingQuestion && segment.speaker === 'you') {
-      // User started speaking — they're about to answer. Fire the answer help NOW.
-      this.fireQuestionAnswer(this.pendingQuestion);
-      this.pendingQuestion = null;
-    } else if (this.pendingQuestion && segment.speaker !== 'you') {
-      // Same speaker continued — they're still asking. Append to question.
-      this.pendingQuestion += ' ' + segment.text;
-      this.pendingQuestionTime = Date.now();
-    }
-
-    // Auto-detect call type at multiple points for better accuracy
+    // Auto-detect call type at multiple points
     if (this.segments.length === 3 || this.segments.length === 8 || this.segments.length === 15) {
       this.autoDetectCallType();
     }
 
-    // Periodic AI triggers (rate-limited to avoid spam)
-    await this.maybeRunPeriodicChecks(segment);
+    // ALL PROACTIVE SUGGESTIONS DISABLED
+    // The coach is now SILENT unless the user asks via chat (manualAsk)
+    // No more: periodic questions, pause opportunities, sentiment checks, auto-answers
+    // This is intentional — user feedback was clear: suggestions were noisy and wrong
 
-    // Periodic summary
-    const now = Date.now();
-    if (now - this.lastSummaryTime > this.summaryInterval && this.segments.length > 20) {
-      this.lastSummaryTime = now;
-      this.runSummaryAgent();
-    }
+    // Learn from Q&A pairs (passive, no LLM call, just tracking)
+    this.detectAndLearnFromAnswer();
   }
 
   private pendingQuestion: string | null = null;

@@ -50,8 +50,9 @@ export class AWSTranscribeEngine extends EventEmitter implements TranscriptionEn
 
     let session = source === 'mic' ? this.micSession : this.sysSession;
 
+    // Auto-reconnect if stream died
     if (!session || session.ended) {
-      const enableDiarization = source === 'system'; // Only diarize system audio
+      const enableDiarization = source === 'system';
       session = new PersistentStream(
         this.client, source, this.region,
         () => ++this.segmentCounter,
@@ -60,6 +61,7 @@ export class AWSTranscribeEngine extends EventEmitter implements TranscriptionEn
       if (source === 'mic') this.micSession = session;
       else this.sysSession = session;
       session.start();
+      console.log(`[AWSTranscribe] Stream ${session.ended ? 're' : ''}started for: ${source}`);
     }
 
     session.push(pcmData);
@@ -109,7 +111,7 @@ class PersistentStream {
 
   start(): void {
     this.run().catch((err) => {
-      console.error(`[AWSTranscribe] Stream ${this.source} error:`, err?.message?.slice(0, 200));
+      console.error(`[AWSTranscribe] Stream ${this.source} error (will auto-reconnect on next audio):`, err?.message?.slice(0, 200));
       this.ended = true;
     });
   }

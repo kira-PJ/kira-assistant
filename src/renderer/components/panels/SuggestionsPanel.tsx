@@ -77,9 +77,9 @@ const SuggestionsPanel: React.FC<SuggestionsPanelProps> = ({ suggestions }) => {
   };
 
   return (
-    <div className="h-full flex flex-col">
-      {/* Suggestions list */}
-      <div ref={scrollRef} className="flex-1 overflow-y-auto p-3 space-y-2">
+    <div className="h-full flex flex-col relative">
+      {/* Suggestions list — scrollable, with bottom padding for chat input */}
+      <div ref={scrollRef} className="flex-1 overflow-y-auto p-3 pb-16 space-y-2">
         {suggestions.length === 0 && chatHistory.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full text-ghost-text-dim">
             <p className="text-[14px] font-medium">Coach</p>
@@ -147,8 +147,8 @@ const SuggestionsPanel: React.FC<SuggestionsPanelProps> = ({ suggestions }) => {
         ))}
       </div>
 
-      {/* Chat input */}
-      <div className="border-t border-ghost-border p-2 bg-ghost-surface/50">
+      {/* Chat input — fixed at bottom, always visible */}
+      <div className="absolute bottom-0 left-0 right-0 border-t border-ghost-border p-2 bg-ghost-surface">
         <div className="flex gap-2">
           <input
             type="text"
