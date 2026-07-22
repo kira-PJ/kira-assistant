@@ -104,8 +104,10 @@ export class SpeakerIdentifier {
       return { ...segment, speakerName: this.youName };
     }
 
-    // If this is a new speaker ID and we predicted who it should be
+    // If this speaker ID was renamed by user, apply that name
     if (this.pendingNextSpeaker && segment.speaker !== this.lastSpeakerId) {
+      // Only apply if user explicitly set this via chat command
+      // (pendingNextSpeaker is now only set from user input, not auto-detection)
       this.speakerIdNames.set(segment.speaker, this.pendingNextSpeaker);
       if (!this.participants.includes(this.pendingNextSpeaker)) {
         this.participants.push(this.pendingNextSpeaker);
@@ -113,35 +115,18 @@ export class SpeakerIdentifier {
       this.pendingNextSpeaker = null;
     }
 
-    // Check if this speaker ID has been named already
+    // Check if this speaker ID has been named already (by user via chat/click)
     const namedSpeaker = this.speakerIdNames.get(segment.speaker);
     if (namedSpeaker) {
       this.lastSpeakerId = segment.speaker;
-      // Still scan for name references (for predicting NEXT speaker)
-      this.detectContextNames(segment.text);
       return { ...segment, speakerName: namedSpeaker };
     }
 
-    // Try self-introduction detection
-    const selfName = this.detectSelfIntro(segment.text);
-    if (selfName) {
-      this.speakerIdNames.set(segment.speaker, selfName);
-      if (!this.participants.includes(selfName)) {
-        this.participants.push(selfName);
-      }
-      this.lastSpeakerId = segment.speaker;
-      return { ...segment, speakerName: selfName };
-    }
-
-    // Scan for context names (handoffs, references)
-    this.detectContextNames(segment.text);
-
-    // Check if any pre-set participant matches a word in the text
-    const matchedParticipant = this.matchParticipantFromText(segment.text);
-    if (matchedParticipant && !namedSpeaker) {
-      // If someone SAYS a participant's name, the NEXT different speaker might be them
-      // Don't rename current speaker — it's a reference, not self-intro
-    }
+    // Auto name detection DISABLED — was creating false names like "Snowflake", "Fabric"
+    // Speaker naming is now ONLY via:
+    // 1. User chat: "Speaker 1 is Michael"
+    // 2. User clicking name in transcript
+    // 3. Pre-call participant list
 
     this.lastSpeakerId = segment.speaker;
 

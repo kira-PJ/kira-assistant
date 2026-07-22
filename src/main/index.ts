@@ -482,7 +482,7 @@ app.whenReady().then(async () => {
   });
 
   // === Speaker rename (mid-session) ===
-  ipcMain.handle('rename-speaker', (_event, source: 'you' | 'other', name: string) => {
+  ipcMain.handle('rename-speaker', (_event, source: string, name: string) => {
     orchestrator?.renameSpeaker(source, name);
   });
 

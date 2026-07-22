@@ -42,7 +42,7 @@ contextBridge.exposeInMainWorld('ghostAPI', {
   switchAudioDevice: (type: 'mic' | 'system', deviceName: string) => ipcRenderer.invoke('switch-audio-device', type, deviceName),
 
   // === Speaker management ===
-  renameSpeaker: (source: 'you' | 'other', name: string) => ipcRenderer.invoke('rename-speaker', source, name),
+  renameSpeaker: (source: string, name: string) => ipcRenderer.invoke('rename-speaker', source, name),
   getSpeakerNames: () => ipcRenderer.invoke('get-speaker-names'),
 
   // === Cloud Sync ===

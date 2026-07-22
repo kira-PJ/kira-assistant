@@ -434,7 +434,7 @@ export class SessionOrchestrator extends EventEmitter {
    * Rename a speaker label mid-session (from UI)
    * Sets the default for future "other" segments.
    */
-  renameSpeaker(source: 'you' | 'other', name: string): void {
+  renameSpeaker(source: string, name: string): void {
     this.speakerIdentifier.renameSpeaker(source, name);
   }
 
