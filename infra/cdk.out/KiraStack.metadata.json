@@ -46,7 +46,7 @@
     {
       "type": "aws:cdk:creationStack",
       "data": [
-        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:247:5)",
+        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:244:5)",
         "<anonymous> (/home/pauline/kira/ghost-assistant/infra/bin/kira-infra.ts:7:1)",
         "...node internals, ts-node, ts-node, ts-node..."
       ]
@@ -60,7 +60,7 @@
     {
       "type": "aws:cdk:creationStack",
       "data": [
-        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:248:5)",
+        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:245:5)",
         "<anonymous> (/home/pauline/kira/ghost-assistant/infra/bin/kira-infra.ts:7:1)",
         "...node internals, ts-node, ts-node, ts-node..."
       ]
@@ -74,7 +74,7 @@
     {
       "type": "aws:cdk:creationStack",
       "data": [
-        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:249:5)",
+        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:246:5)",
         "<anonymous> (/home/pauline/kira/ghost-assistant/infra/bin/kira-infra.ts:7:1)",
         "...node internals, ts-node, ts-node, ts-node..."
       ]
@@ -88,7 +88,7 @@
     {
       "type": "aws:cdk:creationStack",
       "data": [
-        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:250:5)",
+        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:247:5)",
         "<anonymous> (/home/pauline/kira/ghost-assistant/infra/bin/kira-infra.ts:7:1)",
         "...node internals, ts-node, ts-node, ts-node..."
       ]
@@ -102,7 +102,7 @@
     {
       "type": "aws:cdk:creationStack",
       "data": [
-        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:251:5)",
+        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:248:5)",
         "<anonymous> (/home/pauline/kira/ghost-assistant/infra/bin/kira-infra.ts:7:1)",
         "...node internals, ts-node, ts-node, ts-node..."
       ]
@@ -116,7 +116,7 @@
     {
       "type": "aws:cdk:creationStack",
       "data": [
-        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:252:5)",
+        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:249:5)",
         "<anonymous> (/home/pauline/kira/ghost-assistant/infra/bin/kira-infra.ts:7:1)",
         "...node internals, ts-node, ts-node, ts-node..."
       ]
@@ -247,7 +247,7 @@
       "type": "aws:cdk:creationStack",
       "data": [
         "...new RestApi2 in aws-cdk-lib...",
-        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:129:17)",
+        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:120:17)",
         "<anonymous> (/home/pauline/kira/ghost-assistant/infra/bin/kira-infra.ts:7:1)",
         "...node internals, ts-node, ts-node..."
       ]
@@ -262,7 +262,7 @@
       "type": "aws:cdk:creationStack",
       "data": [
         "...new RestApi2 in aws-cdk-lib...",
-        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:129:17)",
+        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:120:17)",
         "<anonymous> (/home/pauline/kira/ghost-assistant/infra/bin/kira-infra.ts:7:1)",
         "...node internals, ts-node, ts-node..."
       ]
@@ -277,7 +277,7 @@
       "type": "aws:cdk:creationStack",
       "data": [
         "...new RestApi2 in aws-cdk-lib...",
-        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:129:17)",
+        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:120:17)",
         "<anonymous> (/home/pauline/kira/ghost-assistant/infra/bin/kira-infra.ts:7:1)",
         "...node internals, ts-node, ts-node..."
       ]
@@ -292,7 +292,7 @@
       "type": "aws:cdk:creationStack",
       "data": [
         "...new CognitoUserPoolsAuthorizer2 in aws-cdk-lib...",
-        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:138:24)",
+        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:131:24)",
         "<anonymous> (/home/pauline/kira/ghost-assistant/infra/bin/kira-infra.ts:7:1)",
         "...node internals, ts-node, ts-node..."
       ]
@@ -307,7 +307,7 @@
       "type": "aws:cdk:creationStack",
       "data": [
         "...new Bucket2 in aws-cdk-lib...",
-        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:162:29)",
+        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:159:29)",
         "<anonymous> (/home/pauline/kira/ghost-assistant/infra/bin/kira-infra.ts:7:1)",
         "...node internals, ts-node, ts-node..."
       ]
@@ -354,7 +354,7 @@
       "type": "aws:cdk:creationStack",
       "data": [
         "...new Distribution2 in aws-cdk-lib...",
-        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:170:26)",
+        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:167:26)",
         "<anonymous> (/home/pauline/kira/ghost-assistant/infra/bin/kira-infra.ts:7:1)",
         "...node internals, ts-node, ts-node..."
       ]
@@ -369,7 +369,7 @@
       "type": "aws:cdk:creationStack",
       "data": [
         "...new Function2 in aws-cdk-lib...",
-        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:193:27)",
+        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:190:27)",
         "<anonymous> (/home/pauline/kira/ghost-assistant/infra/bin/kira-infra.ts:7:1)",
         "...node internals, ts-node, ts-node..."
       ]
@@ -427,7 +427,7 @@
       "type": "aws:cdk:creationStack",
       "data": [
         "...new RestApi2 in aws-cdk-lib...",
-        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:129:17)",
+        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:120:17)",
         "<anonymous> (/home/pauline/kira/ghost-assistant/infra/bin/kira-infra.ts:7:1)",
         "...node internals, ts-node..."
       ]
@@ -436,13 +436,13 @@
   "/KiraStack/KiraApi/Deployment/Resource": [
     {
       "type": "aws:cdk:logicalId",
-      "data": "KiraApiDeploymentBA0FF78A608505b3f104d4845eb1ab00646a6de4"
+      "data": "KiraApiDeploymentBA0FF78A0a9361aa4a4f7e0cfcd7f506514bbbcf"
     },
     {
       "type": "aws:cdk:creationStack",
       "data": [
         "...new RestApi2 in aws-cdk-lib...",
-        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:129:17)",
+        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:120:17)",
         "<anonymous> (/home/pauline/kira/ghost-assistant/infra/bin/kira-infra.ts:7:1)",
         "...node internals, ts-node..."
       ]
@@ -457,7 +457,7 @@
       "type": "aws:cdk:creationStack",
       "data": [
         "...new RestApi2 in aws-cdk-lib...",
-        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:129:17)",
+        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:120:17)",
         "<anonymous> (/home/pauline/kira/ghost-assistant/infra/bin/kira-infra.ts:7:1)",
         "...node internals, ts-node..."
       ]
@@ -472,7 +472,7 @@
       "type": "aws:cdk:creationStack",
       "data": [
         "...new Bucket2 in aws-cdk-lib...",
-        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:162:29)",
+        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:159:29)",
         "<anonymous> (/home/pauline/kira/ghost-assistant/infra/bin/kira-infra.ts:7:1)",
         "...node internals..."
       ]
@@ -506,7 +506,7 @@
       "type": "aws:cdk:creationStack",
       "data": [
         "...new Function2 in aws-cdk-lib...",
-        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:193:27)",
+        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:190:27)",
         "<anonymous> (/home/pauline/kira/ghost-assistant/infra/bin/kira-infra.ts:7:1)",
         "...node internals, ts-node, ts-node..."
       ]
@@ -534,7 +534,7 @@
       "type": "aws:cdk:creationStack",
       "data": [
         "...new RestApi2 in aws-cdk-lib...",
-        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:129:17)"
+        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:120:17)"
       ]
     }
   ],
@@ -547,7 +547,7 @@
       "type": "aws:cdk:creationStack",
       "data": [
         "...RootResource.addResource in aws-cdk-lib...",
-        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:142:28)",
+        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:135:28)",
         "<anonymous> (/home/pauline/kira/ghost-assistant/infra/bin/kira-infra.ts:7:1)",
         "...node internals, ts-node, ts-node..."
       ]
@@ -562,7 +562,7 @@
       "type": "aws:cdk:creationStack",
       "data": [
         "...RootResource.addResource in aws-cdk-lib...",
-        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:239:29)",
+        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:236:29)",
         "<anonymous> (/home/pauline/kira/ghost-assistant/infra/bin/kira-infra.ts:7:1)",
         "...node internals, ts-node, ts-node..."
       ]
@@ -577,7 +577,7 @@
       "type": "aws:cdk:creationStack",
       "data": [
         "...new Distribution2 in aws-cdk-lib...",
-        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:170:26)",
+        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:167:26)",
         "<anonymous> (/home/pauline/kira/ghost-assistant/infra/bin/kira-infra.ts:7:1)"
       ]
     }
@@ -604,7 +604,7 @@
       "type": "aws:cdk:creationStack",
       "data": [
         "...RootResource.addResource in aws-cdk-lib...",
-        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:142:28)",
+        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:135:28)",
         "<anonymous> (/home/pauline/kira/ghost-assistant/infra/bin/kira-infra.ts:7:1)"
       ]
     }
@@ -618,7 +618,7 @@
       "type": "aws:cdk:creationStack",
       "data": [
         "...WrappedClass.addMethod in aws-cdk-lib...",
-        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:143:11)",
+        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:136:11)",
         "<anonymous> (/home/pauline/kira/ghost-assistant/infra/bin/kira-infra.ts:7:1)",
         "...node internals, ts-node..."
       ]
@@ -633,7 +633,7 @@
       "type": "aws:cdk:creationStack",
       "data": [
         "...WrappedClass.addMethod in aws-cdk-lib...",
-        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:143:11)",
+        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:136:11)",
         "<anonymous> (/home/pauline/kira/ghost-assistant/infra/bin/kira-infra.ts:7:1)",
         "...node internals, ts-node..."
       ]
@@ -648,7 +648,7 @@
       "type": "aws:cdk:creationStack",
       "data": [
         "...WrappedClass.addMethod in aws-cdk-lib...",
-        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:143:11)",
+        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:136:11)",
         "<anonymous> (/home/pauline/kira/ghost-assistant/infra/bin/kira-infra.ts:7:1)",
         "...node internals, ts-node, ts-node..."
       ]
@@ -663,7 +663,7 @@
       "type": "aws:cdk:creationStack",
       "data": [
         "...WrappedClass.addMethod in aws-cdk-lib...",
-        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:147:11)",
+        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:140:11)",
         "<anonymous> (/home/pauline/kira/ghost-assistant/infra/bin/kira-infra.ts:7:1)",
         "...node internals, ts-node..."
       ]
@@ -678,7 +678,7 @@
       "type": "aws:cdk:creationStack",
       "data": [
         "...WrappedClass.addMethod in aws-cdk-lib...",
-        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:147:11)",
+        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:140:11)",
         "<anonymous> (/home/pauline/kira/ghost-assistant/infra/bin/kira-infra.ts:7:1)",
         "...node internals, ts-node..."
       ]
@@ -693,7 +693,7 @@
       "type": "aws:cdk:creationStack",
       "data": [
         "...WrappedClass.addMethod in aws-cdk-lib...",
-        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:147:11)",
+        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:140:11)",
         "<anonymous> (/home/pauline/kira/ghost-assistant/infra/bin/kira-infra.ts:7:1)",
         "...node internals, ts-node, ts-node..."
       ]
@@ -708,7 +708,7 @@
       "type": "aws:cdk:creationStack",
       "data": [
         "...WrappedClass.addResource in aws-cdk-lib...",
-        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:152:28)",
+        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:145:28)",
         "<anonymous> (/home/pauline/kira/ghost-assistant/infra/bin/kira-infra.ts:7:1)",
         "...node internals, ts-node, ts-node..."
       ]
@@ -723,7 +723,7 @@
       "type": "aws:cdk:creationStack",
       "data": [
         "...RootResource.addResource in aws-cdk-lib...",
-        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:239:29)",
+        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:236:29)",
         "<anonymous> (/home/pauline/kira/ghost-assistant/infra/bin/kira-infra.ts:7:1)"
       ]
     }
@@ -737,7 +737,7 @@
       "type": "aws:cdk:creationStack",
       "data": [
         "...WrappedClass.addMethod in aws-cdk-lib...",
-        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:240:12)",
+        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:237:12)",
         "<anonymous> (/home/pauline/kira/ghost-assistant/infra/bin/kira-infra.ts:7:1)",
         "...node internals, ts-node..."
       ]
@@ -752,7 +752,7 @@
       "type": "aws:cdk:creationStack",
       "data": [
         "...WrappedClass.addMethod in aws-cdk-lib...",
-        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:240:12)",
+        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:237:12)",
         "<anonymous> (/home/pauline/kira/ghost-assistant/infra/bin/kira-infra.ts:7:1)",
         "...node internals, ts-node..."
       ]
@@ -767,7 +767,7 @@
       "type": "aws:cdk:creationStack",
       "data": [
         "...WrappedClass.addMethod in aws-cdk-lib...",
-        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:240:12)",
+        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:237:12)",
         "<anonymous> (/home/pauline/kira/ghost-assistant/infra/bin/kira-infra.ts:7:1)",
         "...node internals, ts-node, ts-node..."
       ]
@@ -782,7 +782,7 @@
       "type": "aws:cdk:creationStack",
       "data": [
         "...WrappedClass.addResource in aws-cdk-lib...",
-        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:152:28)",
+        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:145:28)",
         "<anonymous> (/home/pauline/kira/ghost-assistant/infra/bin/kira-infra.ts:7:1)"
       ]
     }
@@ -796,7 +796,7 @@
       "type": "aws:cdk:creationStack",
       "data": [
         "...WrappedClass.addMethod in aws-cdk-lib...",
-        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:153:14)",
+        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:146:14)",
         "<anonymous> (/home/pauline/kira/ghost-assistant/infra/bin/kira-infra.ts:7:1)",
         "...node internals, ts-node..."
       ]
@@ -811,7 +811,7 @@
       "type": "aws:cdk:creationStack",
       "data": [
         "...WrappedClass.addMethod in aws-cdk-lib...",
-        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:153:14)",
+        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:146:14)",
         "<anonymous> (/home/pauline/kira/ghost-assistant/infra/bin/kira-infra.ts:7:1)",
         "...node internals, ts-node..."
       ]
@@ -826,7 +826,52 @@
       "type": "aws:cdk:creationStack",
       "data": [
         "...WrappedClass.addMethod in aws-cdk-lib...",
-        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:153:14)",
+        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:146:14)",
+        "<anonymous> (/home/pauline/kira/ghost-assistant/infra/bin/kira-infra.ts:7:1)",
+        "...node internals, ts-node, ts-node..."
+      ]
+    }
+  ],
+  "/KiraStack/KiraApi/Default/calls/{callId}/DELETE/ApiPermission.KiraStackKiraApi54A8B8B3.DELETE..calls.{callId}": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "KiraApicallscallIdDELETEApiPermissionKiraStackKiraApi54A8B8B3DELETEcallscallId64F6D4C4"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...WrappedClass.addMethod in aws-cdk-lib...",
+        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:150:14)",
+        "<anonymous> (/home/pauline/kira/ghost-assistant/infra/bin/kira-infra.ts:7:1)",
+        "...node internals, ts-node..."
+      ]
+    }
+  ],
+  "/KiraStack/KiraApi/Default/calls/{callId}/DELETE/ApiPermission.Test.KiraStackKiraApi54A8B8B3.DELETE..calls.{callId}": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "KiraApicallscallIdDELETEApiPermissionTestKiraStackKiraApi54A8B8B3DELETEcallscallId87275E17"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...WrappedClass.addMethod in aws-cdk-lib...",
+        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:150:14)",
+        "<anonymous> (/home/pauline/kira/ghost-assistant/infra/bin/kira-infra.ts:7:1)",
+        "...node internals, ts-node..."
+      ]
+    }
+  ],
+  "/KiraStack/KiraApi/Default/calls/{callId}/DELETE/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "KiraApicallscallIdDELETED083883E"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...WrappedClass.addMethod in aws-cdk-lib...",
+        "new KiraStack (/home/pauline/kira/ghost-assistant/infra/lib/kira-stack.ts:150:14)",
         "<anonymous> (/home/pauline/kira/ghost-assistant/infra/bin/kira-infra.ts:7:1)",
         "...node internals, ts-node, ts-node..."
       ]

@@ -92,6 +92,12 @@ async function apiGet(path: string, token: string): Promise<any> {
   return res.json();
 }
 
+async function apiDelete(path: string, token: string): Promise<any> {
+  const res = await fetch(`${API_URL}${path}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
+  if (!res.ok) throw new Error(`API error: ${res.status}`);
+  return res.json();
+}
+
 async function apiSearch(query: string, token: string): Promise<{ results: CallMeta[]; total: number }> {
   const res = await fetch(`${API_URL}/search`, {
     method: 'POST',
@@ -327,6 +333,16 @@ const CallList: React.FC<{ calls: CallMeta[]; loading: boolean; onOpen: (id: str
   const [searching, setSearching] = useState(false);
   const [activeTab, setActiveTab] = useState<ListTab>('calls');
 
+  const handleDelete = async (callId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!token) return;
+    if (!confirm('Delete this call permanently?')) return;
+    try {
+      await apiDelete(`/calls/${callId}`, token);
+      onRefresh();
+    } catch { /* silently fail */ }
+  };
+
   const handleSearch = async () => {
     if (!searchQuery.trim()) { setSearchResults(null); return; }
     // Local filter for instant results
@@ -540,6 +556,14 @@ const CallList: React.FC<{ calls: CallMeta[]; loading: boolean; onOpen: (id: str
                   {call.score}
                 </div>
               )}
+              <button
+                onClick={(e) => handleDelete(call.callId, e)}
+                style={{ fontSize: '12px', color: t.textMuted, background: 'none', border: `1px solid ${t.border}`, borderRadius: '6px', padding: '4px 10px', cursor: 'pointer', marginLeft: '12px', flexShrink: 0 }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = t.danger; e.currentTarget.style.color = t.danger; }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = t.border; e.currentTarget.style.color = t.textMuted; }}
+              >
+                Delete
+              </button>
             </div>
           </div>
         ))}

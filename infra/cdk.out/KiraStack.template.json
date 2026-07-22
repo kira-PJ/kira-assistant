@@ -478,7 +478,8 @@
    "Type": "AWS::Lambda::Function",
    "Properties": {
     "Code": {
-     "ZipFile": "\n        exports.handler = async (event) => {\n          const body = JSON.parse(event.body || '{}');\n          return {\n            statusCode: 200,\n            headers: { 'Content-Type': 'application/json' },\n            body: JSON.stringify({ message: 'K.I.R.A. API', timestamp: Date.now() }),\n          };\n        };\n      "
+     "S3Bucket": "cdk-hnb659fds-assets-480421269472-us-east-1",
+     "S3Key": "327b6cd19c64caaae4d99656a38f2639e041fedc7cb5e3c14a31834138b25fe5.zip"
     },
     "Environment": {
      "Variables": {
@@ -513,7 +514,10 @@
     "ApiHandlerServiceRole592E70E9"
    ],
    "Metadata": {
-    "aws:cdk:path": "KiraStack/ApiHandler/Resource"
+    "aws:cdk:path": "KiraStack/ApiHandler/Resource",
+    "aws:asset:path": "asset.327b6cd19c64caaae4d99656a38f2639e041fedc7cb5e3c14a31834138b25fe5",
+    "aws:asset:is-bundled": false,
+    "aws:asset:property": "Code"
    }
   },
   "KiraApiDE592999": {
@@ -581,7 +585,7 @@
     "aws:cdk:path": "KiraStack/KiraApi/Account"
    }
   },
-  "KiraApiDeploymentBA0FF78A608505b3f104d4845eb1ab00646a6de4": {
+  "KiraApiDeploymentBA0FF78A0a9361aa4a4f7e0cfcd7f506514bbbcf": {
    "Type": "AWS::ApiGateway::Deployment",
    "Properties": {
     "Description": "K.I.R.A. backend API",
@@ -590,6 +594,7 @@
     }
    },
    "DependsOn": [
+    "KiraApicallscallIdDELETED083883E",
     "KiraApicallscallIdGET32290C80",
     "KiraApicallscallIdOPTIONSFA891AE0",
     "KiraApicallscallIdA38629B2",
@@ -611,7 +616,7 @@
    "Type": "AWS::ApiGateway::Stage",
    "Properties": {
     "DeploymentId": {
-     "Ref": "KiraApiDeploymentBA0FF78A608505b3f104d4845eb1ab00646a6de4"
+     "Ref": "KiraApiDeploymentBA0FF78A0a9361aa4a4f7e0cfcd7f506514bbbcf"
     },
     "RestApiId": {
      "Ref": "KiraApiDE592999"
@@ -635,9 +640,14 @@
      "IntegrationResponses": [
       {
        "ResponseParameters": {
-        "method.response.header.Access-Control-Allow-Headers": "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Amz-User-Agent'",
-        "method.response.header.Access-Control-Allow-Origin": "'*'",
-        "method.response.header.Access-Control-Allow-Methods": "'OPTIONS,GET,PUT,POST,DELETE,PATCH,HEAD'"
+        "method.response.header.Access-Control-Allow-Headers": "'Content-Type,Authorization'",
+        "method.response.header.Access-Control-Allow-Origin": "'https://kira.sentibay.com'",
+        "method.response.header.Vary": "'Origin'",
+        "method.response.header.Access-Control-Allow-Methods": "'OPTIONS,GET,PUT,POST,DELETE,PATCH,HEAD'",
+        "method.response.header.Access-Control-Allow-Credentials": "'true'"
+       },
+       "ResponseTemplates": {
+        "application/json": "#set($origin = $input.params().header.get(\"Origin\"))\n#if($origin == \"\")\n  #set($origin = $input.params().header.get(\"origin\"))\n#end\n#if($origin == \"https://d3722i2y1crm55.cloudfront.net\" || $origin == \"app://kira-assistant\")\n  #set($context.responseOverride.header.Access-Control-Allow-Origin = $origin)\n#end"
        },
        "StatusCode": "204"
       }
@@ -652,7 +662,9 @@
       "ResponseParameters": {
        "method.response.header.Access-Control-Allow-Headers": true,
        "method.response.header.Access-Control-Allow-Origin": true,
-       "method.response.header.Access-Control-Allow-Methods": true
+       "method.response.header.Vary": true,
+       "method.response.header.Access-Control-Allow-Methods": true,
+       "method.response.header.Access-Control-Allow-Credentials": true
       },
       "StatusCode": "204"
      }
@@ -699,9 +711,14 @@
      "IntegrationResponses": [
       {
        "ResponseParameters": {
-        "method.response.header.Access-Control-Allow-Headers": "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Amz-User-Agent'",
-        "method.response.header.Access-Control-Allow-Origin": "'*'",
-        "method.response.header.Access-Control-Allow-Methods": "'OPTIONS,GET,PUT,POST,DELETE,PATCH,HEAD'"
+        "method.response.header.Access-Control-Allow-Headers": "'Content-Type,Authorization'",
+        "method.response.header.Access-Control-Allow-Origin": "'https://kira.sentibay.com'",
+        "method.response.header.Vary": "'Origin'",
+        "method.response.header.Access-Control-Allow-Methods": "'OPTIONS,GET,PUT,POST,DELETE,PATCH,HEAD'",
+        "method.response.header.Access-Control-Allow-Credentials": "'true'"
+       },
+       "ResponseTemplates": {
+        "application/json": "#set($origin = $input.params().header.get(\"Origin\"))\n#if($origin == \"\")\n  #set($origin = $input.params().header.get(\"origin\"))\n#end\n#if($origin == \"https://d3722i2y1crm55.cloudfront.net\" || $origin == \"app://kira-assistant\")\n  #set($context.responseOverride.header.Access-Control-Allow-Origin = $origin)\n#end"
        },
        "StatusCode": "204"
       }
@@ -716,7 +733,9 @@
       "ResponseParameters": {
        "method.response.header.Access-Control-Allow-Headers": true,
        "method.response.header.Access-Control-Allow-Origin": true,
-       "method.response.header.Access-Control-Allow-Methods": true
+       "method.response.header.Vary": true,
+       "method.response.header.Access-Control-Allow-Methods": true,
+       "method.response.header.Access-Control-Allow-Credentials": true
       },
       "StatusCode": "204"
      }
@@ -977,9 +996,14 @@
      "IntegrationResponses": [
       {
        "ResponseParameters": {
-        "method.response.header.Access-Control-Allow-Headers": "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Amz-User-Agent'",
-        "method.response.header.Access-Control-Allow-Origin": "'*'",
-        "method.response.header.Access-Control-Allow-Methods": "'OPTIONS,GET,PUT,POST,DELETE,PATCH,HEAD'"
+        "method.response.header.Access-Control-Allow-Headers": "'Content-Type,Authorization'",
+        "method.response.header.Access-Control-Allow-Origin": "'https://kira.sentibay.com'",
+        "method.response.header.Vary": "'Origin'",
+        "method.response.header.Access-Control-Allow-Methods": "'OPTIONS,GET,PUT,POST,DELETE,PATCH,HEAD'",
+        "method.response.header.Access-Control-Allow-Credentials": "'true'"
+       },
+       "ResponseTemplates": {
+        "application/json": "#set($origin = $input.params().header.get(\"Origin\"))\n#if($origin == \"\")\n  #set($origin = $input.params().header.get(\"origin\"))\n#end\n#if($origin == \"https://d3722i2y1crm55.cloudfront.net\" || $origin == \"app://kira-assistant\")\n  #set($context.responseOverride.header.Access-Control-Allow-Origin = $origin)\n#end"
        },
        "StatusCode": "204"
       }
@@ -994,7 +1018,9 @@
       "ResponseParameters": {
        "method.response.header.Access-Control-Allow-Headers": true,
        "method.response.header.Access-Control-Allow-Origin": true,
-       "method.response.header.Access-Control-Allow-Methods": true
+       "method.response.header.Vary": true,
+       "method.response.header.Access-Control-Allow-Methods": true,
+       "method.response.header.Access-Control-Allow-Credentials": true
       },
       "StatusCode": "204"
      }
@@ -1120,6 +1146,116 @@
     "aws:cdk:path": "KiraStack/KiraApi/Default/calls/{callId}/GET/Resource"
    }
   },
+  "KiraApicallscallIdDELETEApiPermissionKiraStackKiraApi54A8B8B3DELETEcallscallId64F6D4C4": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "ApiHandler5E7490E8",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":execute-api:us-east-1:480421269472:",
+       {
+        "Ref": "KiraApiDE592999"
+       },
+       "/",
+       {
+        "Ref": "KiraApiDeploymentStageprod19007D51"
+       },
+       "/DELETE/calls/*"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "KiraStack/KiraApi/Default/calls/{callId}/DELETE/ApiPermission.KiraStackKiraApi54A8B8B3.DELETE..calls.{callId}"
+   }
+  },
+  "KiraApicallscallIdDELETEApiPermissionTestKiraStackKiraApi54A8B8B3DELETEcallscallId87275E17": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "ApiHandler5E7490E8",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":execute-api:us-east-1:480421269472:",
+       {
+        "Ref": "KiraApiDE592999"
+       },
+       "/test-invoke-stage/DELETE/calls/*"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "KiraStack/KiraApi/Default/calls/{callId}/DELETE/ApiPermission.Test.KiraStackKiraApi54A8B8B3.DELETE..calls.{callId}"
+   }
+  },
+  "KiraApicallscallIdDELETED083883E": {
+   "Type": "AWS::ApiGateway::Method",
+   "Properties": {
+    "AuthorizationType": "COGNITO_USER_POOLS",
+    "AuthorizerId": {
+     "Ref": "KiraAuthorizer7DE45903"
+    },
+    "HttpMethod": "DELETE",
+    "Integration": {
+     "IntegrationHttpMethod": "POST",
+     "Type": "AWS_PROXY",
+     "Uri": {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":apigateway:us-east-1:lambda:path/2015-03-31/functions/",
+        {
+         "Fn::GetAtt": [
+          "ApiHandler5E7490E8",
+          "Arn"
+         ]
+        },
+        "/invocations"
+       ]
+      ]
+     }
+    },
+    "ResourceId": {
+     "Ref": "KiraApicallscallIdA38629B2"
+    },
+    "RestApiId": {
+     "Ref": "KiraApiDE592999"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "KiraStack/KiraApi/Default/calls/{callId}/DELETE/Resource"
+   }
+  },
   "KiraApisearch103CBCAF": {
    "Type": "AWS::ApiGateway::Resource",
    "Properties": {
@@ -1148,9 +1284,14 @@
      "IntegrationResponses": [
       {
        "ResponseParameters": {
-        "method.response.header.Access-Control-Allow-Headers": "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Amz-User-Agent'",
-        "method.response.header.Access-Control-Allow-Origin": "'*'",
-        "method.response.header.Access-Control-Allow-Methods": "'OPTIONS,GET,PUT,POST,DELETE,PATCH,HEAD'"
+        "method.response.header.Access-Control-Allow-Headers": "'Content-Type,Authorization'",
+        "method.response.header.Access-Control-Allow-Origin": "'https://kira.sentibay.com'",
+        "method.response.header.Vary": "'Origin'",
+        "method.response.header.Access-Control-Allow-Methods": "'OPTIONS,GET,PUT,POST,DELETE,PATCH,HEAD'",
+        "method.response.header.Access-Control-Allow-Credentials": "'true'"
+       },
+       "ResponseTemplates": {
+        "application/json": "#set($origin = $input.params().header.get(\"Origin\"))\n#if($origin == \"\")\n  #set($origin = $input.params().header.get(\"origin\"))\n#end\n#if($origin == \"https://d3722i2y1crm55.cloudfront.net\" || $origin == \"app://kira-assistant\")\n  #set($context.responseOverride.header.Access-Control-Allow-Origin = $origin)\n#end"
        },
        "StatusCode": "204"
       }
@@ -1165,7 +1306,9 @@
       "ResponseParameters": {
        "method.response.header.Access-Control-Allow-Headers": true,
        "method.response.header.Access-Control-Allow-Origin": true,
-       "method.response.header.Access-Control-Allow-Methods": true
+       "method.response.header.Vary": true,
+       "method.response.header.Access-Control-Allow-Methods": true,
+       "method.response.header.Access-Control-Allow-Credentials": true
       },
       "StatusCode": "204"
      }
@@ -1730,7 +1873,7 @@
   "CDKMetadata": {
    "Type": "AWS::CDK::Metadata",
    "Properties": {
-    "Analytics": "v2:deflate64:H4sIAAAAAAAA/3VQwW7bMAz9luasqF0K9LBbmqLADkWDZDsVxSDLrMvGEgORapYK+vdBstO4wAYY4CMf6feeFnpx801fXZgDz227m/fY6LQVY3fKHPh3ao/eOGobnX6apge1evEVZMXXOt1GuwMpwxENZU092uN5PPRPaebwD/rZ99lUrcjwta4U6+nBVoyAAy88y89ZWeo8Cun0iyGsifoi8IlPYNUjeJlSwySr3rimNTrdR28FyZedKV5DcMiM5LNC43Ta0BC41nOmAWVl9tgZgYM56rQBluUe6/YZLq2l6EXdwb6noxt9TbqtmK5KDGADTDFYuDUM6gHkldpCjujEjiIjHh7llJWXUV4p4AeEauCzy8r2FNuXQF50ukOWgE2s0R8Ddli8AvOPFryg1JyrcnBfDv63Mf1Nzl8MPkbZR1GryELu386/UOtA79hCqNGXzCDlSdB3WXlqQb/x5fviSpfv4o0R5yF6QQd6M9S/bsIJesgCAAA="
+    "Analytics": "v2:deflate64:H4sIAAAAAAAA/3WQwW7bMAyGn6U5K1qXAj30lqYosMPQIOlORVHIEuuyscRApJqlgt99kOw0HrABBvhRJE3+/0Ivrr/rywtz4Ll1u3mHjc5bMXanzIFfsjsG48k1Oj+apgO1eg0VesVXOt8muwMpjyMN4dYwjLimDu3x3DHkT3nm8TeG2c1surhs5CtdS6ynA1sxAh6C8Kx/7pWlNqCQzr8Y4pqoKwu++ASrDiHItDS89KozvnFG5/sUrCCF0jPlNUSPzEihV2i8zhsatNd41jRQ8eLFMIOwXpagzB5bI3AwR503wLLcY50+49JaSkHUHew7Ovrxzkm2FdPWlQNsgClFC9XanyBv5EpxpFN1XDLyYNJJOy+TvFHET4j1gK+sV7aj5F4jBdH5DlkiNqla8RCxxXIrMP9wEASl6l6Vgfsy8L+O6W/6/nxg9adIwtCWvock+yRqlVjI/1vGX6V1pA90EIsPvQrkQL/zt4/FpS7fxTsjzmMKgh70Zoh/ADqjXljjAgAA"
    },
    "Metadata": {
     "aws:cdk:path": "KiraStack/CDKMetadata/Default"

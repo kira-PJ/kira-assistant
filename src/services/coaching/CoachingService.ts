@@ -584,18 +584,13 @@ Respond with JSON:
   private async onSilenceDetected(): Promise<void> {
     if (this.segments.length < 3) return;
 
-    // Check for call-end signals in the last few segments
-    const lastSegments = this.segments.slice(-5).map(s => s.text.toLowerCase()).join(' ');
-    const farewellPatterns = /\b(thank you|thanks everyone|bye|goodbye|talk later|have a good|take care|cheers|see you|that's all|wrap up|end the call)\b/i;
-    if (farewellPatterns.test(lastSegments)) {
-      // Likely end of call — emit event for auto-stop
-      this.emit('call-ending-detected');
-      console.log('[Coaching] Call-end phrases detected after silence');
-      return; // Don't suggest anything during farewell
-    }
+    // Check for call-end signals — DISABLED (too aggressive, triggers mid-call)
+    // TODO: Re-enable with smarter detection (require 30s silence + farewell from MULTIPLE speakers)
+    // const farewellPatterns = /...
+    // if (farewellPatterns.test(lastSegments)) { ... }
 
     // Only suggest during pauses if we're leading (not attending)
-    if (this.meetingContext.myRole === 'attending') return;
+    if (this.meetingContext.myRole === 'attending' || this.meetingContext.myRole === 'team_member') return;
 
     const context = this.getContext();
     const systemPrompt = PromptTemplates.getSystemPrompt(this.callType, this.meetingContext.myRole);

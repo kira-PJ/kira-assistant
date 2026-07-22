@@ -1,5 +1,5 @@
-import { DynamoDBClient, QueryCommand, PutItemCommand, GetItemCommand, DeleteItemCommand } from '@aws-sdk/client-dynamodb';
-import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
+import { DynamoDBClient, QueryCommand, PutItemCommand, GetItemCommand } from '@aws-sdk/client-dynamodb';
+import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
 import { marshall, unmarshall } from '@aws-sdk/util-dynamodb';
 
 const dynamo = new DynamoDBClient({});
@@ -44,12 +44,6 @@ export const handler = async (event) => {
     if (method === 'GET' && path === '/calls/{callId}') {
       const callId = event.pathParameters?.callId;
       return await getCall(userId, callId);
-    }
-
-    // DELETE /calls/{callId} — delete a call
-    if (method === 'DELETE' && path === '/calls/{callId}') {
-      const callId = event.pathParameters?.callId;
-      return await deleteCall(userId, callId);
     }
 
     // POST /search
@@ -191,26 +185,6 @@ async function getCall(userId, callId) {
     actionItems: fullData.actionItems || [],
     processed: fullData.processed || null,
   });
-}
-
-async function deleteCall(userId, callId) {
-  if (!callId) return response(400, { error: 'callId required' });
-
-  // Delete from DynamoDB
-  await dynamo.send(new DeleteItemCommand({
-    TableName: CALLS_TABLE,
-    Key: marshall({ userId, callId }),
-  }));
-
-  // Delete from S3
-  try {
-    await s3.send(new DeleteObjectCommand({
-      Bucket: TRANSCRIPTS_BUCKET,
-      Key: `${userId}/${callId}.json`,
-    }));
-  } catch { /* S3 object may not exist */ }
-
-  return response(200, { success: true, callId });
 }
 
 async function searchCalls(userId, query) {

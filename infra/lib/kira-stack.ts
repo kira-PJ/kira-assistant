@@ -147,6 +147,10 @@ export class KiraStack extends cdk.Stack {
       authorizer,
       authorizationType: apigateway.AuthorizationType.COGNITO,
     });
+    callById.addMethod('DELETE', new apigateway.LambdaIntegration(apiHandler), {
+      authorizer,
+      authorizationType: apigateway.AuthorizationType.COGNITO,
+    });
 
     // === Outputs ===
 

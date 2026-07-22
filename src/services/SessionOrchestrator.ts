@@ -256,16 +256,8 @@ export class SessionOrchestrator extends EventEmitter {
       this.emit('tech-mention', mention);
     });
 
-    // Auto-stop detection
-    this.coaching.on('call-ending-detected', () => {
-      console.log('[Orchestrator] Call ending detected — auto-stopping in 10s');
-      setTimeout(() => {
-        if (this.state === 'active') {
-          this.stop();
-          this.emit('auto-stopped', 'Call end detected (farewell + silence)');
-        }
-      }, 10000); // Wait 10s to confirm it's really ending
-    });
+    // Auto-stop detection — DISABLED (was too aggressive, triggered on "thank you" mid-call)
+    // Will only stop when user explicitly clicks Stop or uses Ctrl+Shift+R
 
     this.coaching.on('call-type-detected', (type: string) => {
       this.emit('call-type-detected', type);
